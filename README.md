@@ -44,3 +44,6 @@ Next we'll generate trade executions off of block orders and publish them downst
 4) leverage CDC to publish trade executions into a partitioned Kafka topic
 
 Then we can write our dotnet program to consume those trade executions and persist them in the **allocatons** domain for further processing.  And we'll be able to test the flow with different CRDB sizes, configurations, best practices, scenarios to optimize throughput and make recommendations for an actual implementation and production deployment.
+
+## Running the Simulation
+You can download the repository and run the simulation locally to test different scenarios and configurations that are appropriate for your own distributed transaction workload.  More information on environment setup and the steps required to run the simulation can be found on our [wiki pages](https://github.com/roachlong/distributed-transactions-poc/wiki).
