@@ -15,7 +15,7 @@ public abstract class BaseDbContext : DbContext
         var connStringBuilder = new NpgsqlConnectionStringBuilder();
         connStringBuilder.SslMode = SslMode.Disable;
         // connStringBuilder.IncludeErrorDetails = true;
-        string? databaseUrlEnv = Environment.GetEnvironmentVariable("DATABASE_URL");
+        string databaseUrlEnv = Environment.GetEnvironmentVariable("DATABASE_URL");
         if (databaseUrlEnv == null) {
             connStringBuilder.Host = "localhost";
             connStringBuilder.Port = 26257;
@@ -32,7 +32,7 @@ public abstract class BaseDbContext : DbContext
         optionsBuilder.UseNpgsql(connStringBuilder.ConnectionString)
             // .UseLazyLoadingProxies()
             // .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
-            .LogTo(Console.WriteLine, LogLevel.Information)
+            .LogTo(Console.WriteLine, LogLevel.Warning)
             .EnableSensitiveDataLogging()
             .EnableDetailedErrors();
     }
