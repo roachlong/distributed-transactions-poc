@@ -6,21 +6,22 @@ The purpose of this project is to setup a proof of concept that will demonstrate
 ## Outline
 The workflow is roughly outlined in three phases
 
-#### i) Rebalancing
-* client portfolios are evaluated for drift
+#### i) Routing
+* client portfolios are evaluated for eligibility and drift
 * buy / sell adjustments are decided for each position
 * changes for each asset are aggregated across accounts into block orders
-* orders are sent to the market for fulfillment
+* orders are sent through the OMS to the market for fulfillment
+* and later the post trade allocations will be received and sent for booking
 
 #### ii) Allocations
-* individual trade executions are collected from the block orders
+* individual trade executions are collected from the market
 * trades are aggregated back to the accounts mapped in the block order
 * snapshots are taken along the way to partially fill orders with a fair market price
-* orders are then sent to the OMS for processing
+* allocations are then sent for routing and booking
 
 #### iii) Booking
-* order management system will reconcile account and position details
-* and send the completed transaction to back office for settlement
+* back office system will reconcile account and position details
+* and prepare the completed transaction for settlement
 
 ## Domain Models
 We'll break the problem up with a clear separation of concerns between each step of the workflow.  To achieve this we'll define a separate database for each domain.
@@ -37,13 +38,30 @@ The first step is to setup static data that we can use to run our tests.
 2) publish daily pricing information into the **market** domain
 3) generate accounts with random positions stored in the **holdings** domain
 
-Next we'll generate trade executions off of block orders and publish them downstream to the customer allocation process.  This will simulate the rebalancing phase so that we can focus on consumption, aggregation and distribution in the allocation phase.
-1) based on a given trading day, rebalance **holdings** using the open price in the **market**
-2) aggregate positions across all security holdings into the block **orders** domain
-3) generate executions in the **trades** domain to draw down against block **orders**
-4) leverage CDC to publish trade executions into a partitioned Kafka topic
+Next we'll create block orders that can be used to simuate trade executions.
+1) define a process to determine eligible portfolios with criteria-based groups in **holdings**
+2) enable new groups to be defined to structure blocks for intraday activity with the same criteria
+3) based on a given trading day, rebalance **holdings** using the open price in the **market**
+4) map protfolio **holding** accounts and **reference** securities to the group definitions for each customer **order**
+5) aggregate related group positions across all security holdings into the block **orders** domain
 
-Then we can write our dotnet program to consume those trade executions and persist them in the **allocatons** domain for further processing.  And we'll be able to test the flow with different CRDB sizes, configurations, best practices, scenarios to optimize throughput and make recommendations for an actual implementation and production deployment.
+Then we'll generate trade executions off of block orders and publish them downstream to the customer allocation process.  This will allow us focus on consumption, aggregation and distribution in the allocation phase independently of the routing phase.
+1) generate executions in the **trades** domain to draw down against block **orders**
+2) and leverage CDC to publish trade executions into a partitioned Kafka topic
+3) consume those trade executions and persist them in the **allocations** domain
+4) map each **allocation** to a custoner **order** and generate a fullfillment of the order
+5) interrogate pricess in the **market** along with previous trade executions to determine a fullfilment price
+
+With this we'll be able to test the flow with different CRDB sizes, configurations, best practices, scenarios to optimize throughput and make recommendations for an actual implementation and production deployment.
+
+## Use Cases
+We can leverage the PoC to demonstrate various use cases and outcomes defined below.
+
+#### i) Trade Capture
+We want to consume trade executions as quickly as possible, maintaining the order, and persisiting events to the database with transactional integrity.  The rate of message delivery and writing to the database should be independent, and we can control throughput by scaling the number of message sinks, application processes, and database nodes.
+
+#### ii) Rebalancing
+We want to implement a complex multi-step workflow with interprocess dependencies using an IPC protocol for guaranteed delivery.  To accomplish this we'll leverage the transactional outbox pattern, linking together independent units of work in our data pipeline with CDC messages sent to Kafka topics. 
 
 ## Running the Simulation
 You can download the repository and run the simulation locally to test different scenarios and configurations that are appropriate for your own distributed transaction workload.  More information on environment setup and the steps required to run the simulation can be found on our [wiki pages](https://github.com/roachlong/distributed-transactions-poc/wiki).
