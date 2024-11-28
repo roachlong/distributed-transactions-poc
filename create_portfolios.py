@@ -1,5 +1,6 @@
-from enum import Enum
 import datetime
+from enum import Enum
+from faker import Faker
 import psycopg
 import random
 import string
@@ -7,12 +8,14 @@ import string
 class Field(Enum):
     id = 0
     acct_num = 1
-    opened_on = 2
-    cash = 3
-    created_on = 4
-    created_by = 5
-    modified_on = 6
-    modified_by = 7
+    manager_id= 2
+    opened_on = 3
+    cash = 4
+    strategy = 5
+    created_on = 6
+    created_by = 7
+    modified_on = 8
+    modified_by = 9
     asset_class = 0
     symbol = 1
     close = 2
@@ -25,6 +28,7 @@ class Create_portfolios:
 
         # you can arbitrarely add any variables you want
         self.counter: int = 0
+        self.fake = Faker()
 
 
 
@@ -47,11 +51,50 @@ class Create_portfolios:
     # This process continues until dbworkload exits.
     def loop(self):
         # print(f"id: {self.id} and counter: {self.counter} LOOP called")
-        return [self.create_portfolio, self.add_securities]
+        return [self.get_manager, self.create_portfolio, self.add_securities]
     
 
 
+    def get_manager(self, conn: psycopg.Connection):
+        with conn.cursor() as cur:
+            # query how many portfolio managers currently exist
+            sql = """
+            select count("Id") from "PortfolioManagers";
+            """
+            num_managers = cur.execute(sql).fetchone()[0]
+        
+            # create a new portfolio manager 0.1% of the time
+            if num_managers == 0 or 1 >= random.randint(1, 1000):
+                ins = """
+                insert into "PortfolioManagers" ("Name")
+                values ('{0}') returning *;
+                """.format(self.fake.name())
+
+                # and save the new portfolio manager for further processing
+                try:
+                    cur.execute(ins)
+                except psycopg.Error as e:
+                    print(f"Ignoring '{e}' error")
+                num_managers += 1
+            
+            # and choose a random portfolio manager
+            sel = """
+            select * from "PortfolioManagers"
+            offset cast(floor(random() * {0}) as int)
+            limit 1;
+            """.format(num_managers)
+            self.manager = cur.execute(sel).fetchone()
+
+
+
     def create_portfolio(self, conn: psycopg.Connection):
+        # if get portfolio manager failed then exit
+        if (self.manager is None or
+            len(self.manager) < 6 or
+            self.manager[Field.id.value] is None
+        ):
+            return
+        
         self.counter += 1
         self.portfolio = None
 
@@ -76,10 +119,10 @@ class Create_portfolios:
             strategy = random.randint(0, 4)
 
             ins = """
-            insert into "Portfolios" ("AccountNum", "OpenedOn", "Cash", "Strategy")
-            values (%s, %s, %s, %s) returning *;
+            insert into "Portfolios" ("AccountNum", "ManagerId", "OpenedOn", "Cash", "Strategy")
+            values (%s, %s, %s, %s, %s) returning *;
             """
-            params = (acct_num, open_date, cash, strategy)
+            params = (acct_num, self.manager[Field.id.value], open_date, cash, strategy)
 
             # and save the new portfolio for further processing
             self.portfolio = cur.execute(ins, params).fetchone()
@@ -91,7 +134,7 @@ class Create_portfolios:
     def add_securities(self, conn: psycopg.Connection):
         # if the create portfolio failed then exit
         if (self.portfolio is None or
-            len(self.portfolio) < 8 or
+            len(self.portfolio) < 10 or
             self.portfolio[Field.id.value] is None
         ):
             return

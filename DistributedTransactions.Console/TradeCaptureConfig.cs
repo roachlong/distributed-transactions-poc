@@ -7,7 +7,7 @@ public static class TradeCaptureConfig
     public static ConsumerConfig GetConfig() {
         return new ConsumerConfig {
             BootstrapServers = "localhost:9092",
-            GroupId = "Test_4_TradeCapture",
+            GroupId = "TradeCapture",
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = false
         };

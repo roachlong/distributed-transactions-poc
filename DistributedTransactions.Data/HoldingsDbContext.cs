@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DistributedTransactions.Data;
 
 public class HoldingsDbContext : BaseDbContext
-{
+{    public required DbSet<PortfolioManager> PortfolioManagers { get; set; }
     public required DbSet<Portfolio> Portfolios { get; set; }
     public required DbSet<Position> Positions { get; set; }
     

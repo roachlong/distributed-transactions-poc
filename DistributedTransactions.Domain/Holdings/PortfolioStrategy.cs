@@ -6,5 +6,6 @@ public enum PortfolioStrategy : int
     Diversification,
     DollarCostAveraging,
     InvestInGrowth,
-    MarketTiming
+    MarketTiming,
+    Undefined
 }

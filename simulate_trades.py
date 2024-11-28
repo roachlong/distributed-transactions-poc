@@ -1,7 +1,6 @@
 from enum import Enum
 import math
 import numpy as np
-import os
 import psycopg
 from psycopg import errors
 import random
