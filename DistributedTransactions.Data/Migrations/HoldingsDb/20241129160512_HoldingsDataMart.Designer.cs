@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DistributedTransactions.Data.Migrations.HoldingsDb
 {
     [DbContext(typeof(HoldingsDbContext))]
-    [Migration("20241128191850_HoldingsDataMart")]
+    [Migration("20241129160512_HoldingsDataMart")]
     partial class HoldingsDataMart
     {
         /// <inheritdoc />
@@ -49,6 +49,9 @@ namespace DistributedTransactions.Data.Migrations.HoldingsDb
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("now()");
+
+                    b.Property<bool>("Eligible")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("ManagerId")
                         .HasColumnType("uuid");

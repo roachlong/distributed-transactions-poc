@@ -8,6 +8,6 @@ public class CustomerOrderConfiguration : BaseOrderConfiguration<CustomerOrder>
     public override void Configure(EntityTypeBuilder<CustomerOrder> builder)
     {
         base.Configure(builder);
-        builder.HasIndex(q => new {q.PositionId, q.AssetClass, q.Symbol, q.Date}).IsUnique();
+        builder.HasIndex(q => new {q.RequestNumber, q.PositionId}).IsUnique();
     }
 }

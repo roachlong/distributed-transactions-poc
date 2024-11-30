@@ -47,6 +47,9 @@ namespace DistributedTransactions.Data.Migrations.HoldingsDb
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<bool>("Eligible")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("ManagerId")
                         .HasColumnType("uuid");
 

@@ -7,5 +7,6 @@ public class Portfolio : HoldingsDomainModel
     public DateTime OpenedOn { get; set; }
     public double Cash { get; set; }
     public PortfolioStrategy Strategy { get; set; }
+    public bool Eligible { get; set; }
     public virtual List<Position> Positions { get; set; } = new List<Position>();
 }

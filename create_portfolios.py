@@ -12,10 +12,11 @@ class Field(Enum):
     opened_on = 3
     cash = 4
     strategy = 5
-    created_on = 6
-    created_by = 7
-    modified_on = 8
-    modified_by = 9
+    eligible = 6
+    created_on = 7
+    created_by = 8
+    modified_on = 9
+    modified_by = 10
     asset_class = 0
     symbol = 1
     close = 2
@@ -114,15 +115,16 @@ class Create_portfolios:
             """
             open_date = cur.execute(sql).fetchone()[0]
 
-            # and a random initial cash injection and strategy
+            # and a random initial cash injection, strategy and eligibility
             cash = random.randint(10000, 1000000)
             strategy = random.randint(0, 4)
+            eligible = random.randint(0, 100) <= 80
 
             ins = """
-            insert into "Portfolios" ("AccountNum", "ManagerId", "OpenedOn", "Cash", "Strategy")
-            values (%s, %s, %s, %s, %s) returning *;
+            insert into "Portfolios" ("AccountNum", "ManagerId", "OpenedOn", "Cash", "Strategy", "Eligible")
+            values (%s, %s, %s, %s, %s, %s) returning *;
             """
-            params = (acct_num, self.manager[Field.id.value], open_date, cash, strategy)
+            params = (acct_num, self.manager[Field.id.value], open_date, cash, strategy, eligible)
 
             # and save the new portfolio for further processing
             self.portfolio = cur.execute(ins, params).fetchone()
@@ -134,7 +136,7 @@ class Create_portfolios:
     def add_securities(self, conn: psycopg.Connection):
         # if the create portfolio failed then exit
         if (self.portfolio is None or
-            len(self.portfolio) < 10 or
+            len(self.portfolio) < 11 or
             self.portfolio[Field.id.value] is None
         ):
             return

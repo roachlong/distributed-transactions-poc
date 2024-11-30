@@ -14,7 +14,7 @@ class Field(Enum):
     value = 5
     allocation = 6
 
-class Generate_orders:
+class Calculate_Eligible_Orders:
 
     def __init__(self, args: dict):
         # args is a dict of string passed with the --args flag
@@ -42,10 +42,11 @@ class Generate_orders:
         # but the math has to work out so that the partitions don't overlap and
         # if the number of iterations exceeds to the size of the partition then stop
         with conn.cursor() as cur:
-            # query how many portfolios are available for the given market date
+            # query how many eligible portfolios are available for the given market date
             sql = """
             select count("Id") from holdings."Portfolios"
-            where "OpenedOn" <= '{0}';
+            where "Eligible" = true
+              and "OpenedOn" <= '{0}';
             """.format(self.market_date)
             num_portfolios = cur.execute(sql).fetchone()[0]
 

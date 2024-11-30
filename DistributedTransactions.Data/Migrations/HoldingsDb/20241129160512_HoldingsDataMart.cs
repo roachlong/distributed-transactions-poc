@@ -37,6 +37,7 @@ namespace DistributedTransactions.Data.Migrations.HoldingsDb
                     OpenedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Cash = table.Column<double>(type: "numeric(17,2)", nullable: false),
                     Strategy = table.Column<int>(type: "integer", nullable: false),
+                    Eligible = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
                     CreatedBy = table.Column<string>(type: "text", nullable: false, defaultValue: "system"),
                     ModifiedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),

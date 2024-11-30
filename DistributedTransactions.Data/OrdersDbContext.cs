@@ -5,6 +5,8 @@ namespace DistributedTransactions.Data;
 
 public class OrdersDbContext : BaseDbContext
 {
+    public required DbSet<RebalancingGroup> RebalancingGroups { get; set; }
+    public required DbSet<RebalancingRequest> RebalancingRequests { get; set; }
     public required DbSet<CustomerOrder> CustomerOrders { get; set; }
     public required DbSet<BlockOrder> BlockOrders { get; set; }
     
