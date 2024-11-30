@@ -6,6 +6,7 @@ import random
 import string
 
 class Field(Enum):
+    # portfolio info
     id = 0
     acct_num = 1
     manager_id= 2
@@ -17,6 +18,7 @@ class Field(Enum):
     created_by = 8
     modified_on = 9
     modified_by = 10
+    # price info
     asset_class = 0
     symbol = 1
     close = 2
