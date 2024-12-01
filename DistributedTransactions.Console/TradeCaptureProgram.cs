@@ -15,7 +15,7 @@ class TradeCaptureProgram
 
     private static async Task MainAsync() {
         const string topic = "trade-executions";
-        const int numPartitions = 3;
+        const int numPartitions = 10;
         const int batchSize = 128;
         const int batchWindow = 200;
         const int maxRetries = 5;
