@@ -12,6 +12,7 @@ public abstract class BaseTradeModel : TradesDomainModel
     public TradeDestination Destination { get; set; }
     public TradeType Type { get; set; }
     public TradeRestriction Restriction { get; set; }
-    public int? Amount { get; set; }
+    public int? Quantity { get; set; }
     public double? Price { get; set; }
+    public double? Amount { get; set; }
 }

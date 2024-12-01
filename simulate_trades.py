@@ -15,7 +15,7 @@ class Field(Enum):
     destination = 5
     order_type = 6
     restriction = 7
-    amount = 8
+    quantity = 8
     needed = 9
     high = 10
     low = 11
@@ -27,7 +27,6 @@ class Simulate_trades:
         # user passed a yaml/json, in python that's a dict object
         self.market_date = args.get("market_date", "2024-11-14")
         self.batch_size: int = int(args.get("batch_size", 128))
-        self.adhoc_rate: int = int(args.get("adhoc_rate", 1))
         self.amend_rate: int = int(args.get("amend_rate", 1))
         self.cancel_rate: int = int(args.get("cancel_rate", 1))
 
@@ -64,7 +63,7 @@ class Simulate_trades:
             sql = """
             with orders as (
                 select "Code", "AssetClass", "Symbol", "Date", "Direction",
-                       "Destination", "Type", "Restriction", "Amount", "Needed"
+                       "Destination", "Type", "Restriction", "Quantity", "Needed"
                 from orders."BlockOrders"
                 where cast("Date" as date) = '{0}'
                 offset {1} limit {2}
@@ -115,37 +114,23 @@ class Simulate_trades:
         # until the quantity needed is fully exhausted for all orders
         while True:
             seq_num += 1
-            adhoc_trades, amend_trades, cancel_trades, execute_trades = \
+            amend_trades, cancel_trades, execute_trades = \
                 zip(*map(lambda o: self.get_trade(conn, o, seq_num), self.next_batch))
             
-            adhoc_trades = [t for t in adhoc_trades if t]
             amend_trades = [t for t in amend_trades if t]
             cancel_trades = [t for t in cancel_trades if t]
             execute_trades = [t for t in execute_trades if t]
 
-            if (not adhoc_trades and not amend_trades and
-                not cancel_trades and not execute_trades):
+            if (not amend_trades and not cancel_trades and not execute_trades):
                 break
             else:
-                if adhoc_trades:
-                    sql = """
-                    INSERT INTO \"AdHocTrades\" (
-                        \"BlockOrderCode\", \"BlockOrderSeqNum\", \"AssetClass\",
-                        \"Symbol\", \"Date\", \"Direction\", \"Destination\",
-                        \"Type\", \"Restriction\", \"Amount\", \"Price\",
-                        \"AccountNum\", \"PositionId\"
-                    )
-                    """
-                    if not self.execute(conn, sql, adhoc_trades):
-                        print(f"TRADE CREATION FAILED FOR: {adhoc_trades}")
-
                 if amend_trades:
                     sql = """
                     INSERT INTO \"ReplacedTrades\" (
                         \"BlockOrderCode\", \"BlockOrderSeqNum\", \"AssetClass\",
                         \"Symbol\", \"Date\", \"Direction\", \"Destination\",
                         \"Type\", \"Restriction\", \"NewDestination\",
-                        \"NewType\", \"NewRestriction\", \"NewAmount\"
+                        \"NewType\", \"NewRestriction\", \"NewQuantity\"
                     )
                     """
                     if not self.execute(conn, sql, amend_trades):
@@ -156,7 +141,7 @@ class Simulate_trades:
                     INSERT INTO \"BustedTrades\" (
                         \"BlockOrderCode\", \"BlockOrderSeqNum\", \"AssetClass\",
                         \"Symbol\", \"Date\", \"Direction\", \"Destination\",
-                        \"Type\", \"Restriction\", \"CancelledAmount\"
+                        \"Type\", \"Restriction\", \"CancelledQuantity\"
                     )
                     """
                     if not self.execute(conn, sql, cancel_trades):
@@ -167,7 +152,7 @@ class Simulate_trades:
                     INSERT INTO \"ExecutedTrades\" (
                         \"BlockOrderCode\", \"BlockOrderSeqNum\", \"AssetClass\",
                         \"Symbol\", \"Date\", \"Direction\", \"Destination\",
-                        \"Type\", \"Restriction\", \"Amount\", \"Price\"
+                        \"Type\", \"Restriction\", \"Quantity\", \"Price\"
                     )
                     """
                     if not self.execute(conn, sql, execute_trades):
@@ -178,7 +163,6 @@ class Simulate_trades:
 
 
     def get_trade(self, conn: psycopg.Connection, order, seq_num: int):
-        adhoc_data = []
         amend_data = []
         cancel_data = []
         execute_data = []
@@ -196,35 +180,7 @@ class Simulate_trades:
                 order[Field.restriction.value]
             ]
 
-            if self.adhoc_rate >= random.randint(1, 100):
-                # create an adhoc trade for one of the accounts
-                adhoc_data = data
-                trade_amount = random.randint(1, 5) * 100
-                adhoc_data += [trade_amount]
-                low = order[Field.low.value]
-                high = order[Field.high.value]
-                adhoc_data += [round(random.uniform(low, high), 2)]
-
-                with conn.cursor() as cur:
-                    # query for a random position related to this block order
-                    sql = """
-                    select "AccountNum", "PositionId"
-                    from orders."CustomerOrders"
-                    where "AssetClass" = '{0}'
-                      and "Symbol" = '{1}'
-                      and cast("Date" as date) = '{2}'
-                      and "Direction" = {3}
-                    order by random()
-                    limit 1;
-                    """.format(order[Field.asset_class.value],
-                               order[Field.symbol.value],
-                               order[Field.date.value],
-                               order[Field.direction.value])
-                    account_info = cur.execute(sql).fetchone()
-                adhoc_data += [account_info[0]]
-                adhoc_data += [account_info[1]]
-            
-            elif self.amend_rate >= random.randint(1, 100):
+            if self.amend_rate >= random.randint(1, 100):
                 # create a trade to replace some of the order details
                 amend_data = data
                 new_destination = random.randint(-10, 10)
@@ -248,31 +204,31 @@ class Simulate_trades:
                 percent_increase = np.random.normal() / 10
                 if percent_increase > 0:
                     new_increase = int(order[Field.needed.value] * percent_increase)
-                    order[Field.amount.value] += new_increase
+                    order[Field.quantity.value] += new_increase
                     order[Field.needed.value] += new_increase
-                    amend_data += [order[Field.amount.value]]
+                    amend_data += [order[Field.quantity.value]]
                 else:
                     amend_data += [None]
             
             elif self.cancel_rate >= random.randint(1, 100):
-                # create a trade to cancel some of the original amount
+                # create a trade to cancel some of the original quantity
                 cancel_data = data
-                cancel_amount = random.randint(1, order[Field.needed.value])
-                order[Field.amount.value] -= cancel_amount
-                order[Field.needed.value] -= cancel_amount
-                cancel_data += [cancel_amount]
+                cancel_quantity = random.randint(1, order[Field.needed.value])
+                order[Field.quantity.value] -= cancel_quantity
+                order[Field.needed.value] -= cancel_quantity
+                cancel_data += [cancel_quantity]
             
             else:
                 # draw down on the order with a new trade execution
                 execute_data = data
-                trade_amount = min(random.randint(1, 10) * 50, order[Field.needed.value])
-                order[Field.needed.value] -= trade_amount
-                execute_data += [trade_amount]
+                trade_quantity = min(random.randint(1, 10) * 50, order[Field.needed.value])
+                order[Field.needed.value] -= trade_quantity
+                execute_data += [trade_quantity]
                 low = order[Field.low.value]
                 high = order[Field.high.value]
                 execute_data += [round(random.uniform(low, high), 2)]
 
-        return adhoc_data, amend_data, cancel_data, execute_data
+        return amend_data, cancel_data, execute_data
 
 
 

@@ -5,7 +5,6 @@ namespace DistributedTransactions.Data;
 
 public class TradesDbContext : BaseDbContext
 {
-    public required DbSet<AdHocTrade> AdHocTrades { get; set; }
     public required DbSet<BustedTrade> BustedTrades { get; set; }
     public required DbSet<ExecutedTrade> ExecutedTrades { get; set; }
     public required DbSet<ReplacedTrade> ReplacedTrades { get; set; }

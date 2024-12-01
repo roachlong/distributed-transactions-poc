@@ -24,7 +24,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
       # Additional Settings
-      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_NUM_PARTITIONS: 10
 
   kafka-ui:
     image: ghcr.io/kafbat/kafka-ui

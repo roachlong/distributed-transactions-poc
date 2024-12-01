@@ -15,5 +15,5 @@ public abstract class BaseOrderModel : OrdersDomainModel
     public int Cancelled { get; set; }
     public int Needed { get; set; }
     public double? Price { get; set; }
-    public int? Amount { get; set; }
+    public double? Amount { get; set; }
 }
