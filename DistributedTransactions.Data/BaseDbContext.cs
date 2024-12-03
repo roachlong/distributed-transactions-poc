@@ -13,9 +13,10 @@ public abstract class BaseDbContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         var connStringBuilder = new NpgsqlConnectionStringBuilder();
-        connStringBuilder.SslMode = SslMode.Disable;
+        connStringBuilder.SslMode = SslMode.Require;
         // connStringBuilder.IncludeErrorDetails = true;
         string databaseUrlEnv = Environment.GetEnvironmentVariable("DATABASE_URL");
+        Console.WriteLine($"DATABASE_URL set to: '{databaseUrlEnv}'");
         if (databaseUrlEnv == null) {
             connStringBuilder.Host = "localhost";
             connStringBuilder.Port = 26257;
