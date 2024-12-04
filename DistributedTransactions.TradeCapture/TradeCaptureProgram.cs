@@ -21,7 +21,7 @@ class TradeCaptureProgram
         const int maxRetries = 5;
         const bool useMultiValueInsert = true;
 
-        CancellationTokenSource cts = new CancellationTokenSource();
+        CancellationTokenSource cts = new();
         Console.CancelKeyPress += (_, e) => {
             e.Cancel = true;
             cts.Cancel();
@@ -29,13 +29,17 @@ class TradeCaptureProgram
 
         var tasks = new List<Task>();
         for (int i = 0; i < numPartitions; i++) {
-            tasks.Add(CaptureTrades(topic, i, batchSize, batchWindow, maxRetries, useMultiValueInsert));
+            tasks.Add(CaptureTrades(
+                topic, i, batchSize, batchWindow, maxRetries, useMultiValueInsert, cts.Token
+            ));
         }
         await Task.WhenAll(tasks);
+        cts.Dispose();
     }
 
     private static async Task CaptureTrades(
-        string topic, int partition, int batch_size, int batch_window, int maxRetries, bool useMultiValueInsert
+        string topic, int partition, int batch_size, int batch_window,
+        int maxRetries, bool useMultiValueInsert, CancellationToken token
     ) {
         Console.WriteLine($"Launching consumer {partition} for {topic}...");
         await Task.Run(async () => {
@@ -49,41 +53,47 @@ class TradeCaptureProgram
             else {
                 consumer.Assign(new TopicPartition(topic, partition));
             }
-            await Task.Delay(1000);
+            await Task.Delay(1000, token);
             try {
                 Stopwatch window = Stopwatch.StartNew();
-                while (true) {
-                    var msg = consumer.Consume();
-                    var json = JsonObject.Parse(msg.Message.Value);
-                    if (json != null) {
-                        Trade? trade = JsonSerializer.Deserialize<Trade>(json["after"]);
-                        if (trade != null) {
-                            trades.Add(trade);
-                        }
-                        if (trades.Count >= batch_size || window.ElapsedMilliseconds >= batch_window) {
-                            using var context = new AllocationsDbContext();
-                            if (useMultiValueInsert) {
-                                context.InsertTradesRawSql(trades, maxRetries);
+                while (!token.IsCancellationRequested) {
+                    var msg = consumer.Consume(token);
+                    if (!token.IsCancellationRequested && msg.Message.Value != null) {
+                        var json = JsonObject.Parse(msg.Message.Value);
+                        if (json != null && json["after"] != null) {
+                            Trade? trade = JsonSerializer.Deserialize<Trade>(json["after"]);
+                            if (trade != null) {
+                                trades.Add(trade);
                             }
-                            else {
-                                context.AddRange(trades);
-                                context.SaveChanges();
+                            if (trades.Count >= batch_size || window.ElapsedMilliseconds >= batch_window) {
+                                using var context = new AllocationsDbContext();
+                                if (useMultiValueInsert) {
+                                    context.InsertTradesRawSql(trades, maxRetries);
+                                }
+                                else {
+                                    context.AddRange(trades);
+                                    context.SaveChanges();
+                                }
+                                trades = [];
+                                window = Stopwatch.StartNew();
                             }
-                            trades = [];
-                            window = Stopwatch.StartNew();
                         }
+                        consumer.Commit(msg);
                     }
-                    consumer.Commit(msg);
                 }
             }
             catch (OperationCanceledException) {
-                // Ctrl-C was pressed.
-                return;
+                Console.WriteLine("Cancellation request received");
             }
             catch (ConsumeException e) {
                 Console.WriteLine($"ERROR consuming message: {e.Error.Reason}");
             }
+            catch (Exception e) {
+                Console.WriteLine($"Received {e.GetType}: {e.Message}");
+            }
             finally {
+                await Task.Delay(1000, token);
+                consumer.Unsubscribe();
                 consumer.Close();
             }
         });
