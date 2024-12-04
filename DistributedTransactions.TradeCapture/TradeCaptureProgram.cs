@@ -49,7 +49,7 @@ class TradeCaptureProgram
             else {
                 consumer.Assign(new TopicPartition(topic, partition));
             }
-            Thread.Sleep(1000);
+            await Task.Delay(1000);
             try {
                 Stopwatch window = Stopwatch.StartNew();
                 while (true) {
@@ -78,6 +78,7 @@ class TradeCaptureProgram
             }
             catch (OperationCanceledException) {
                 // Ctrl-C was pressed.
+                return;
             }
             catch (ConsumeException e) {
                 Console.WriteLine($"ERROR consuming message: {e.Error.Reason}");
