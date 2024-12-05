@@ -1,25 +1,22 @@
-﻿using System.Diagnostics;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Confluent.Kafka;
 using DistributedTransactions.Data;
-using DistributedTransactions.Domain.Allocations;
+using DistributedTransactions.Domain.Orders;
+using DistributedTransactions.Data.Util;
 
-namespace DistributedTransactions.TradeCapture;
+namespace DistributedTransactions.RebalanceRequest;
 
-class TradeCaptureProgram
+class RebalanceRequestProgram
 {
     static void Main(string[] args) {
         MainAsync().Wait();
     }
 
     private static async Task MainAsync() {
-        const string topic = "trade-executions";
+        const string topic = "rebalancing-requests";
         const int numPartitions = 10;
-        const int batchSize = 128;
-        const int batchWindow = 200;
         const int maxRetries = 5;
-        const bool useMultiValueInsert = true;
 
         CancellationTokenSource cts = new();
         Console.CancelKeyPress += (_, e) => {
@@ -29,23 +26,21 @@ class TradeCaptureProgram
 
         var tasks = new List<Task>();
         for (int i = 0; i < numPartitions; i++) {
-            tasks.Add(CaptureTrades(
-                topic, i, batchSize, batchWindow, maxRetries, useMultiValueInsert, cts.Token
+            tasks.Add(ReceiveRequests(
+                topic, i, maxRetries, cts.Token
             ));
         }
         await Task.WhenAll(tasks);
         cts.Dispose();
     }
 
-    private static async Task CaptureTrades(
-        string topic, int partition, int batch_size, int batch_window,
-        int maxRetries, bool useMultiValueInsert, CancellationToken token
+    private static async Task ReceiveRequests(
+        string topic, int partition, int maxRetries, CancellationToken token
     ) {
         Console.WriteLine($"Launching consumer {partition} for {topic}...");
         await Task.Run(async () => {
-            var config = TradeCaptureConfig.GetConfig();
+            var config = RebalanceRequestConfig.GetConfig();
             using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-            var trades = new List<Trade>();
 
             if (partition <= 1) {
                 consumer.Subscribe(topic);
@@ -55,27 +50,26 @@ class TradeCaptureProgram
             }
             await Task.Delay(1000, token);
             try {
-                Stopwatch window = Stopwatch.StartNew();
                 while (!token.IsCancellationRequested) {
                     var msg = consumer.Consume(token);
                     if (!token.IsCancellationRequested && msg.Message.Value != null) {
                         var json = JsonObject.Parse(msg.Message.Value);
                         if (json != null && json["after"] != null) {
-                            Trade? trade = JsonSerializer.Deserialize<Trade>(json["after"]);
-                            if (trade != null) {
-                                trades.Add(trade);
-                            }
-                            if (trades.Count >= batch_size || window.ElapsedMilliseconds >= batch_window) {
-                                using var context = new AllocationsDbContext();
-                                if (useMultiValueInsert) {
-                                    context.InsertTradesRawSql(trades, maxRetries);
-                                }
-                                else {
-                                    context.AddRange(trades);
-                                    context.SaveChanges();
-                                }
-                                trades = [];
-                                window = Stopwatch.StartNew();
+                            var serializeOptions = new JsonSerializerOptions {
+                                WriteIndented = true
+                            };
+                            serializeOptions.Converters.Add(new MultiFormatDateConverter {
+                                DateTimeFormats = [
+                                    "yyyy-MM-ddTHH:mm:ssZ",
+                                    "yyyy-MM-ddTHH:mm:ss.ffffffZ"
+                                ]
+                            });
+                            RebalancingRequest? request = JsonSerializer.Deserialize<RebalancingRequest>(
+                                json["after"], serializeOptions
+                            );
+                            if (request != null) {
+                                using var context = new OrdersDbContext();
+                                context.InsertRebalancingSecuritiesRawSql(request, maxRetries);
                             }
                         }
                         consumer.Commit(msg);

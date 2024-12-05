@@ -1,0 +1,38 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "RebalanceRequest Launch (console)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/DistributedTransactions.RebalanceRequest/bin/Debug/net8.0/DistributedTransactions.RebalanceRequest.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/DistributedTransactions.RebalanceRequest",
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "internalConsoleOptions": "openOnSessionStart",
+            "env": {
+                "DATABASE_URL": "postgresql://me:secret@localhost:26257/orders?sslmode=require"
+            }
+        },
+        {
+            "name": "TradeCapture Launch (console)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/DistributedTransactions.TradeCapture/bin/Debug/net8.0/DistributedTransactions.TradeCapture.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/DistributedTransactions.TradeCapture",
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "internalConsoleOptions": "openOnSessionStart",
+            "env": {
+                "DATABASE_URL": "postgresql://me:secret@localhost:26257/trades?sslmode=require"
+            }
+        }
+    ]
+}

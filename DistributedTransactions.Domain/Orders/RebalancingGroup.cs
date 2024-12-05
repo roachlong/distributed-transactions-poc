@@ -2,7 +2,7 @@ namespace DistributedTransactions.Domain.Orders;
 
 public class RebalancingGroup : OrdersDomainModel
 {
-    public required int GroupNumber { get; set; }
+    public required long GroupNumber { get; set; }
     public required string AssetClass { get; set; }
     public required string ManagerName { get; set; }
     public PortfolioStrategy Strategy { get; set; }

@@ -37,7 +37,7 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                     Cancelled = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     Needed = table.Column<int>(type: "integer", nullable: false, computedColumnSql: "\"Quantity\" - \"Filled\" - \"Cancelled\"", stored: true),
                     Price = table.Column<double>(type: "numeric(17,2)", nullable: true),
-                    Amount = table.Column<decimal>(type: "numeric(17,2)", nullable: true, computedColumnSql: "\"Filled\" * \"Price\"", stored: true)
+                    Amount = table.Column<double>(type: "numeric(17,2)", nullable: true, computedColumnSql: "\"Filled\" * \"Price\"", stored: true)
                 },
                 constraints: table =>
                 {
@@ -68,7 +68,7 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                     Cancelled = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     Needed = table.Column<int>(type: "integer", nullable: false, computedColumnSql: "\"Quantity\" - \"Filled\" - \"Cancelled\"", stored: true),
                     Price = table.Column<double>(type: "numeric(17,2)", nullable: true),
-                    Amount = table.Column<decimal>(type: "numeric(17,2)", nullable: true, computedColumnSql: "\"Filled\" * \"Price\"", stored: true)
+                    Amount = table.Column<double>(type: "numeric(17,2)", nullable: true, computedColumnSql: "\"Filled\" * \"Price\"", stored: true)
                 },
                 constraints: table =>
                 {
@@ -80,7 +80,7 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    GroupNumber = table.Column<int>(type: "integer", nullable: false),
+                    GroupNumber = table.Column<int>(type: "integer", nullable: false, defaultValueSql: "unordered_unique_rowid()"),
                     AssetClass = table.Column<string>(type: "text", nullable: false),
                     ManagerName = table.Column<string>(type: "text", nullable: false),
                     Strategy = table.Column<int>(type: "integer", nullable: false),
@@ -101,7 +101,7 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    RequestNumber = table.Column<int>(type: "integer", nullable: false),
+                    RequestNumber = table.Column<int>(type: "integer", nullable: false, defaultValueSql: "unordered_unique_rowid()"),
                     GroupNumber = table.Column<int>(type: "integer", nullable: false),
                     Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
@@ -112,6 +112,27 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RebalancingRequests", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RebalancingSecurities",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    RequestNumber = table.Column<int>(type: "integer", nullable: false),
+                    GroupNumber = table.Column<int>(type: "integer", nullable: false),
+                    Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    AccountNumbers = table.Column<List<string>>(type: "text[]", nullable: false),
+                    AssetClass = table.Column<string>(type: "text", nullable: false),
+                    Symbol = table.Column<string>(type: "text", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
+                    CreatedBy = table.Column<string>(type: "text", nullable: false, defaultValue: "system"),
+                    ModifiedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
+                    ModifiedBy = table.Column<string>(type: "text", nullable: false, defaultValue: "system")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RebalancingSecurities", x => x.Id);
                 });
 
             migrationBuilder.CreateIndex(
@@ -155,6 +176,12 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                 table: "RebalancingRequests",
                 column: "RequestNumber",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RebalancingSecurities_RequestNumber_Symbol",
+                table: "RebalancingSecurities",
+                columns: new[] { "RequestNumber", "Symbol" },
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -171,6 +198,9 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
 
             migrationBuilder.DropTable(
                 name: "RebalancingRequests");
+
+            migrationBuilder.DropTable(
+                name: "RebalancingSecurities");
         }
     }
 }

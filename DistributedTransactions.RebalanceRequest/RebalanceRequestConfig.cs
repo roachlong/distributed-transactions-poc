@@ -1,13 +1,13 @@
 using Confluent.Kafka;
 
-namespace DistributedTransactions.TradeCapture;
+namespace DistributedTransactions.RebalanceRequest;
 
-public static class TradeCaptureConfig
+public static class RebalanceRequestConfig
 {
     public static ConsumerConfig GetConfig() {
         return new ConsumerConfig {
             BootstrapServers = "localhost:9092",
-            GroupId = "TradeCapture",
+            GroupId = "RebalanceRequest",
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = false
         };

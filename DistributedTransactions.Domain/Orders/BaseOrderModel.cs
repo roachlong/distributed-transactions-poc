@@ -2,7 +2,7 @@ namespace DistributedTransactions.Domain.Orders;
 
 public abstract class BaseOrderModel : OrdersDomainModel
 {
-    public required int RequestNumber { get; set; }
+    public required long RequestNumber { get; set; }
     public required string AssetClass { get; set; }
     public required string Symbol { get; set; }
     public DateTime Date { get; set; }

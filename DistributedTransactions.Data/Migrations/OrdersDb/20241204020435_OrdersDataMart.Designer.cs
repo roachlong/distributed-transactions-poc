@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DistributedTransactions.Data.Migrations.OrdersDb
 {
     [DbContext(typeof(OrdersDbContext))]
-    [Migration("20241130151655_OrdersDataMart")]
+    [Migration("20241204020435_OrdersDataMart")]
     partial class OrdersDataMart
     {
         /// <inheritdoc />
@@ -41,7 +41,7 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.Property<decimal?>("Amount")
+                    b.Property<double?>("Amount")
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("numeric(17, 2)")
                         .HasComputedColumnSql("\"Filled\" * \"Price\"", true);
@@ -141,7 +141,7 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("Amount")
+                    b.Property<double?>("Amount")
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("numeric(17, 2)")
                         .HasComputedColumnSql("\"Filled\" * \"Price\"", true);
@@ -253,7 +253,9 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                         .HasDefaultValueSql("now()");
 
                     b.Property<int>("GroupNumber")
-                        .HasColumnType("integer");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValueSql("unordered_unique_rowid()");
 
                     b.Property<string>("ManagerName")
                         .IsRequired()
@@ -324,7 +326,9 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                         .HasDefaultValueSql("now()");
 
                     b.Property<int>("RequestNumber")
-                        .HasColumnType("integer");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValueSql("unordered_unique_rowid()");
 
                     b.HasKey("Id");
 
@@ -335,6 +339,64 @@ namespace DistributedTransactions.Data.Migrations.OrdersDb
                         .IsUnique();
 
                     b.ToTable("RebalancingRequests");
+                });
+
+            modelBuilder.Entity("DistributedTransactions.Domain.Orders.RebalancingSecurity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<List<string>>("AccountNumbers")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<string>("AssetClass")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("system");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("GroupNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("system");
+
+                    b.Property<DateTime>("ModifiedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<int>("RequestNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestNumber", "Symbol")
+                        .IsUnique();
+
+                    b.ToTable("RebalancingSecurities");
                 });
 #pragma warning restore 612, 618
         }
