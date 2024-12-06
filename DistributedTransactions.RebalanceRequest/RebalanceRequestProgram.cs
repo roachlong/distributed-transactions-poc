@@ -69,7 +69,7 @@ class RebalanceRequestProgram
                             );
                             if (request != null) {
                                 using var context = new OrdersDbContext();
-                                context.InsertRebalancingSecuritiesRawSql(request, maxRetries);
+                                context.InsertRebalancingSecurities(request, maxRetries);
                             }
                         }
                         consumer.Commit(msg);

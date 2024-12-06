@@ -20,6 +20,21 @@
             }
         },
         {
+            "name": "SecurityRequest Launch (console)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/DistributedTransactions.SecurityRequest/bin/Debug/net8.0/DistributedTransactions.SecurityRequest.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/DistributedTransactions.SecurityRequest",
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "internalConsoleOptions": "openOnSessionStart",
+            "env": {
+                "DATABASE_URL": "postgresql://me:secret@localhost:26257/orders?sslmode=require"
+            }
+        },
+        {
             "name": "TradeCapture Launch (console)",
             "type": "coreclr",
             "request": "launch",

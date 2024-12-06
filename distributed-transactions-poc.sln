@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedTransactions.Tra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedTransactions.RebalanceRequest", "DistributedTransactions.RebalanceRequest\DistributedTransactions.RebalanceRequest.csproj", "{27542A8F-E3B7-4542-8B40-0C7DCEA2A2CA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedTransactions.SecurityRequest", "DistributedTransactions.SecurityRequest\DistributedTransactions.SecurityRequest.csproj", "{97B5763E-60EB-425A-8405-435EB6C8CCF7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{27542A8F-E3B7-4542-8B40-0C7DCEA2A2CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27542A8F-E3B7-4542-8B40-0C7DCEA2A2CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{27542A8F-E3B7-4542-8B40-0C7DCEA2A2CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97B5763E-60EB-425A-8405-435EB6C8CCF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97B5763E-60EB-425A-8405-435EB6C8CCF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97B5763E-60EB-425A-8405-435EB6C8CCF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97B5763E-60EB-425A-8405-435EB6C8CCF7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
