@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Confluent.Kafka;
 using DistributedTransactions.Data;
@@ -15,7 +14,7 @@ class SecurityRequestProgram
     
     private static async Task MainAsync() {
         const string topic = "security-requests";
-        const int numPartitions = 10;
+        const int numTasks = 20;
         const int batchSize = 128;
         const int maxRetries = 5;
 
@@ -26,9 +25,9 @@ class SecurityRequestProgram
         };
 
         var tasks = new List<Task>();
-        for (int i = 0; i < numPartitions; i++) {
+        for (int i = 0; i < numTasks; i++) {
             tasks.Add(GenerateOrders(
-                topic, i, batchSize, maxRetries, cts.Token
+                topic, batchSize, maxRetries, cts.Token
             ));
         }
         await Task.WhenAll(tasks);
@@ -36,23 +35,16 @@ class SecurityRequestProgram
     }
 
     private static async Task GenerateOrders(
-        string topic, int partition, int batch_size,
+        string topic, int batchSize,
         int maxRetries, CancellationToken token
     ) {
-        Console.WriteLine($"Launching consumer {partition} for {topic}...");
+        Console.WriteLine($"Launching consumer for {topic}...");
         await Task.Run(async () => {
+            var random = new Random();
             var config = SecurityRequestConfig.GetConfig();
             using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-            var random = new Random();
-            var orders = new List<CustomerOrder>();
-
-            if (partition <= 1) {
-                consumer.Subscribe(topic);
-            }
-            else {
-                consumer.Assign(new TopicPartition(topic, partition));
-            }
             await Task.Delay(1000, token);
+            consumer.Subscribe(topic);
             try {
                 while (!token.IsCancellationRequested) {
                     var msg = consumer.Consume(token);
@@ -63,14 +55,13 @@ class SecurityRequestProgram
                             if (security != null)
                             {
                                 using var context = new OrdersDbContext();
-                                GenerateCustomerOrders(
-                                    security, ref orders, random, context, batch_size, maxRetries
+                                var orders = GenerateCustomerOrders(
+                                    security, random, context, batchSize, maxRetries
                                 );
                                 if (orders.Count > 0) {
                                     context.InsertCustomerOrders(orders, maxRetries);
-                                    orders = [];
+                                    context.CreateBlockOrder(security, maxRetries);
                                 }
-                                context.CreateBlockOrder(security, maxRetries);
                             }
                         }
                         consumer.Commit(msg);
@@ -97,12 +88,12 @@ class SecurityRequestProgram
                 consumer.Close();
             }
         });
-        Console.WriteLine($"Completed consumer {partition} for {topic}!!");
+        Console.WriteLine($"Completed consumer for {topic}!!");
     }
 
-    private static void GenerateCustomerOrders(
-        RebalancingSecurity security, ref List<CustomerOrder> orders,
-        Random random, OrdersDbContext context, int batch_size, int maxRetries
+    private static List<CustomerOrder> GenerateCustomerOrders(
+        RebalancingSecurity security, Random random,
+        OrdersDbContext context, int batchSize, int maxRetries
     ) {
 #pragma warning disable CS8605 // Unboxing a possibly null value.
         Array values = Enum.GetValues(typeof(OrderDestination));
@@ -118,6 +109,7 @@ class SecurityRequestProgram
         var restriction = (OrderRestriction)values.GetValue(value);
 #pragma warning restore CS8605 // Unboxing a possibly null value.
 
+        var orders = new List<CustomerOrder>();
         var positions = context.GetOpeningPositions(security, maxRetries);
         foreach (var position in positions) {
             var required = (int)(position.PortfolioValue * position.Allocation / position.Open);
@@ -142,10 +134,11 @@ class SecurityRequestProgram
             };
 
             orders.Add(order);
-            if (orders.Count >= batch_size) {
+            if (orders.Count >= batchSize) {
                 context.InsertCustomerOrders(orders, maxRetries);
                 orders = [];
             }
         }
+        return orders;
     }
 }

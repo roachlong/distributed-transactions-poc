@@ -35,6 +35,21 @@
             }
         },
         {
+            "name": "TradeExecution Launch (console)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/DistributedTransactions.TradeExecution/bin/Debug/net8.0/DistributedTransactions.TradeExecution.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/DistributedTransactions.TradeExecution",
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "internalConsoleOptions": "openOnSessionStart",
+            "env": {
+                "DATABASE_URL": "postgresql://me:secret@localhost:26257/trades?sslmode=require"
+            }
+        },
+        {
             "name": "TradeCapture Launch (console)",
             "type": "coreclr",
             "request": "launch",
@@ -46,7 +61,7 @@
             "stopAtEntry": false,
             "internalConsoleOptions": "openOnSessionStart",
             "env": {
-                "DATABASE_URL": "postgresql://me:secret@localhost:26257/trades?sslmode=require"
+                "DATABASE_URL": "postgresql://me:secret@localhost:26257/allocations?sslmode=require"
             }
         }
     ]

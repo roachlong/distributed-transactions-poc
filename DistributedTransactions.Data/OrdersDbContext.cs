@@ -79,7 +79,7 @@ public class OrdersDbContext : BaseDbContext
                     JOIN market."Prices" m ON
                          m."AssetClass" = x."AssetClass"
                      AND m."Symbol" = x."Symbol"
-                     AND cast(m."Date" as date) = '{security.Date.ToString("o", CultureInfo.InvariantCulture)}';
+                     AND CAST(m."Date" AS DATE) = '{security.Date.ToString("o", CultureInfo.InvariantCulture)}';
                 """;
                 return [.. Database.SqlQueryRaw<OpeningPosition>(sql)];
             }

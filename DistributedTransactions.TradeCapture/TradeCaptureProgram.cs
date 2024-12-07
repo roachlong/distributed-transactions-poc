@@ -38,34 +38,33 @@ class TradeCaptureProgram
     }
 
     private static async Task CaptureTrades(
-        string topic, int partition, int batch_size, int batch_window,
+        string topic, int partition, int batchSize, int batchWindow,
         int maxRetries, bool useMultiValueInsert, CancellationToken token
     ) {
         Console.WriteLine($"Launching consumer {partition} for {topic}...");
         await Task.Run(async () => {
+            var trades = new List<Trade>();
             var config = TradeCaptureConfig.GetConfig();
             using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-            var trades = new List<Trade>();
-
+            await Task.Delay(1000, token);
             if (partition <= 1) {
                 consumer.Subscribe(topic);
             }
             else {
                 consumer.Assign(new TopicPartition(topic, partition));
             }
-            await Task.Delay(1000, token);
             try {
                 Stopwatch window = Stopwatch.StartNew();
                 while (!token.IsCancellationRequested) {
-                    var msg = consumer.Consume(token);
-                    if (!token.IsCancellationRequested && msg.Message.Value != null) {
+                    var msg = consumer.Consume(batchWindow);
+                    if (!token.IsCancellationRequested && msg != null && msg.Message.Value != null) {
                         var json = JsonObject.Parse(msg.Message.Value);
                         if (json != null && json["after"] != null) {
                             Trade? trade = JsonSerializer.Deserialize<Trade>(json["after"]);
                             if (trade != null) {
                                 trades.Add(trade);
                             }
-                            if (trades.Count >= batch_size || window.ElapsedMilliseconds >= batch_window) {
+                            if (trades.Count >= batchSize || window.ElapsedMilliseconds >= batchWindow) {
                                 using var context = new AllocationsDbContext();
                                 if (useMultiValueInsert) {
                                     context.InsertTradesRawSql(trades, maxRetries);
@@ -79,6 +78,18 @@ class TradeCaptureProgram
                             }
                         }
                         consumer.Commit(msg);
+                    }
+                    if (trades.Count > 0 && window.ElapsedMilliseconds >= batchWindow) {
+                        using var context = new AllocationsDbContext();
+                        if (useMultiValueInsert) {
+                            context.InsertTradesRawSql(trades, maxRetries);
+                        }
+                        else {
+                            context.AddRange(trades);
+                            context.SaveChanges();
+                        }
+                        trades = [];
+                        window = Stopwatch.StartNew();
                     }
                 }
             }

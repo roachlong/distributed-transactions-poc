@@ -15,7 +15,7 @@ class RebalanceRequestProgram
 
     private static async Task MainAsync() {
         const string topic = "rebalancing-requests";
-        const int numPartitions = 10;
+        const int numTasks = 5;
         const int maxRetries = 5;
 
         CancellationTokenSource cts = new();
@@ -25,9 +25,9 @@ class RebalanceRequestProgram
         };
 
         var tasks = new List<Task>();
-        for (int i = 0; i < numPartitions; i++) {
+        for (int i = 0; i < numTasks; i++) {
             tasks.Add(ReceiveRequests(
-                topic, i, maxRetries, cts.Token
+                topic, maxRetries, cts.Token
             ));
         }
         await Task.WhenAll(tasks);
@@ -35,20 +35,14 @@ class RebalanceRequestProgram
     }
 
     private static async Task ReceiveRequests(
-        string topic, int partition, int maxRetries, CancellationToken token
+        string topic, int maxRetries, CancellationToken token
     ) {
-        Console.WriteLine($"Launching consumer {partition} for {topic}...");
+        Console.WriteLine($"Launching consumer for {topic}...");
         await Task.Run(async () => {
             var config = RebalanceRequestConfig.GetConfig();
             using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-
-            if (partition <= 1) {
-                consumer.Subscribe(topic);
-            }
-            else {
-                consumer.Assign(new TopicPartition(topic, partition));
-            }
             await Task.Delay(1000, token);
+            consumer.Subscribe(topic);
             try {
                 while (!token.IsCancellationRequested) {
                     var msg = consumer.Consume(token);
@@ -91,6 +85,6 @@ class RebalanceRequestProgram
                 consumer.Close();
             }
         });
-        Console.WriteLine($"Completed consumer {partition} for {topic}!!");
+        Console.WriteLine($"Completed consumer for {topic}!!");
     }
 }
