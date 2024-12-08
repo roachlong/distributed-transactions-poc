@@ -47,6 +47,7 @@ public class OrdersDbContext : BaseDbContext
             catch (DataException e) {
                 Console.WriteLine($"ERROR writing rebalancing securities: {e.Message}");
                 retries++;
+                Thread.Sleep(1000 * retries);
             }
         }
         throw new DataException($"failed to insert rebalancing securities after {retries} retries");
@@ -86,15 +87,31 @@ public class OrdersDbContext : BaseDbContext
             catch (DataException e) {
                 Console.WriteLine($"ERROR reading opening positions: {e.Message}");
                 retries++;
+                Thread.Sleep(1000 * retries);
             }
         }
         throw new DataException($"failed to retrieve opening positions after {retries} retries");
     }
 
+    /*
+        Here we're uisng raw sql to create a multi-value insert for any number of records
+        that can be processed in a single transaction (micro-batch).  This provides
+        significant performance optimiazation, however, we have to pay attention to
+        our object model field types and properly convert the values for the database.
+
+        GUIDs require us to convert the value to a string
+        Enums require us to convert the value to an int
+        Dates require us to use proper ISO stirng formatting
+        Nullable types require us to check for null values
+        And make sure you put single quotes where they are required
+    */
     public int InsertCustomerOrders(List<CustomerOrder> orders, int maxRetries) {
         var retries = 0;
+        // with any transaction, no matter how unlikely, we should always expect
+        // potential serializable isolation errors and be prepared to retry
         while (retries < maxRetries) {
             try {
+                // setting up the sql for our multi-value insert for the provided number of records
                 var sql = """
                     INSERT INTO "CustomerOrders" (
                         "RequestNumber", "AccountNum", "PositionId",
@@ -102,6 +119,8 @@ public class OrdersDbContext : BaseDbContext
                         "Destination", "Type", "Restriction", "Quantity"
                     ) VALUES 
                     """;
+                
+                // using list comprehension to create an array of records with the expected number of field values
                 var values = from order in orders select string.Format(
                     @"({0}, '{1}', '{2}', '{3}', '{4}', '{5}', {6}, {7}, {8}, {9}, {10})",
                     order.RequestNumber, order.AccountNum,
@@ -110,12 +129,19 @@ public class OrdersDbContext : BaseDbContext
                     order.Date.ToString("o", CultureInfo.InvariantCulture),
                     (int) order.Direction, (int) order.Destination,
                     (int) order.Type, (int) order.Restriction, order.Quantity);
+                
+                // then join the value records together in a comma-separated string of tuples
+                // and ignore duplicate records (conflicts) or we could also handle conflicts with the
+                // ON CONFLICT DO UPDATE SET field1 = excluded.field1, field2 = excluded... syntax
                 sql += String.Join(", ", values.ToArray()) + " ON CONFLICT DO NOTHING;";
                 return Database.ExecuteSqlRaw(sql);
             }
             catch (DataException e) {
                 Console.WriteLine($"ERROR writing orders: {e.Message}");
+
+                // in case of consecutive errors we'll progressively cool off before the next attempt
                 retries++;
+                Thread.Sleep(1000 * retries);
             }
         }
         throw new DataException($"failed to insert orders after {retries} retries");
@@ -155,6 +181,7 @@ public class OrdersDbContext : BaseDbContext
             catch (DataException e) {
                 Console.WriteLine($"ERROR writing block order: {e.Message}");
                 retries++;
+                Thread.Sleep(1000 * retries);
             }
         }
         throw new DataException($"failed to insert block order after {retries} retries");
@@ -164,7 +191,7 @@ public class OrdersDbContext : BaseDbContext
 public class OpeningPosition {
     public string AccountNum { get; set; }
     public Guid PositionId { get; set; }
-    public int Quantity { get; set; }
+    public long Quantity { get; set; }
     public double Open { get; set; }
     public double PortfolioValue { get; set; }
     public double Allocation { get; set; }

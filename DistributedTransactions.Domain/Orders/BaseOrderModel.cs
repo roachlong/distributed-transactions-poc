@@ -10,10 +10,10 @@ public abstract class BaseOrderModel : OrdersDomainModel
     public OrderDestination Destination { get; set; }
     public OrderType Type { get; set; }
     public OrderRestriction Restriction { get; set; }
-    public int Quantity { get; set; }
-    public int Filled { get; set; }
-    public int Cancelled { get; set; }
-    public int Needed { get; set; }
+    public long Quantity { get; set; }
+    public long Filled { get; set; }
+    public long Cancelled { get; set; }
+    public long Needed { get; set; }
     public double? Price { get; set; }
     public double? Amount { get; set; }
 }

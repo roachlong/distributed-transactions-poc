@@ -19,10 +19,25 @@ public class AllocationsDbContext : BaseDbContext
         return typeof(AllocationsDomainModel);
     }
 
+    /*
+        Here we're uisng raw sql to create a multi-value insert for any number of records
+        that can be processed in a single transaction (micro-batch).  This provides
+        significant performance optimiazation, however, we have to pay attention to
+        our object model field types and properly convert the values for the database.
+
+        GUIDs require us to convert the value to a string
+        Enums require us to convert the value to an int
+        Dates require us to use proper ISO stirng formatting
+        Nullable types require us to check for null values
+        And make sure you put single quotes where they are required
+    */
     public int InsertTradesRawSql(List<Trade> trades, int maxRetries) {
         var retries = 0;
+        // with any transaction, no matter how unlikely, we should always expect
+        // potential serializable isolation errors and be prepared to retry
         while (retries < maxRetries) {
             try {
+                // setting up the sql for our multi-value insert for the provided number of records
                 var sql = """
                     INSERT INTO "Trades" (
                         "Id", "ActivityType", "BlockOrderCode", "BlockOrderSeqNum",
@@ -32,6 +47,8 @@ public class AllocationsDbContext : BaseDbContext
                         "NewQuantity", "CreatedBy", "CreatedOn", "ModifiedBy", "ModifiedOn"
                     ) VALUES 
                     """;
+                
+                // using list comprehension to create an array of records with the expected number of field values
                 var values = from trade in trades select string.Format(
                     @"('{0}', {1}, '{2}', {3}, '{4}', '{5}', '{6}', {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, '{18}', '{19}', '{20}', '{21}')",
                     trade.Id.ToString(), (int) trade.ActivityType, trade.BlockOrderCode,
@@ -47,17 +64,31 @@ public class AllocationsDbContext : BaseDbContext
                     trade.NewQuantity == null ? "null" : trade.NewQuantity,
                     trade.CreatedBy, trade.CreatedOn.ToString("o", CultureInfo.InvariantCulture),
                     trade.ModifiedBy, trade.ModifiedOn.ToString("o", CultureInfo.InvariantCulture));
+                
+                // then join the value records together in a comma-separated string of tuples
+                // and ignore duplicate records (conflicts) or we could also handle conflicts with the
+                // ON CONFLICT DO UPDATE SET field1 = excluded.field1, field2 = excluded... syntax
                 sql += String.Join(", ", values.ToArray()) + " ON CONFLICT DO NOTHING;";
                 return Database.ExecuteSqlRaw(sql);
             }
             catch (DataException e) {
                 Console.WriteLine($"ERROR writing trades: {e.Message}");
+
+                // in case of consecutive errors we'll progressively cool off before the next attempt
                 retries++;
+                Thread.Sleep(1000 * retries);
             }
         }
         throw new DataException($"failed to insert trades after {retries} retries");
     }
 
+    /*
+        I left this as an example using parameterized queries but the processing overhead
+        for building a dynamic multi-value insert statement with an unknown number of
+        records is not a good use case.  However, you can apply the command syntax for other
+        well known queires with specific parameters and save them for repeated execuiton
+        if you want to maintain a separate context for performing prepared statements.
+    */
     public int InsertTradesDbCommand(List<Trade> trades, int maxRetries) {
         var retries = 0;
         while (retries < maxRetries) {

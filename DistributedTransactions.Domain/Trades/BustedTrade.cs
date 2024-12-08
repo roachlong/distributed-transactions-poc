@@ -2,5 +2,5 @@ namespace DistributedTransactions.Domain.Trades;
 
 public class BustedTrade : BaseTradeModel
 {
-    public int CancelledQuantity { get; set; }
+    public long CancelledQuantity { get; set; }
 }
