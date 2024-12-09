@@ -65,7 +65,7 @@ We want to consume trade executions as quickly as possible, maintaining the orde
 #### ii) Rebalancing
 We want to implement a complex multi-step workflow with interprocess dependencies using an IPC protocol for guaranteed delivery.  To accomplish this we'll leverage the transactional outbox pattern, linking together independent units of work in our data pipeline with CDC messages sent to Kafka topics.
 
-![Initialize Rebalance](https://github.com/user-attachments/assets/0a381ccf-467a-4594-bd16-4745bbdf1146)
+![Initialize Rebalance](https://github.com/user-attachments/assets/a5f34960-9a79-4325-9e12-3f6da8324e09)
 
 ## Running the Simulation
 You can download the repository and run the simulation locally to test different scenarios and configurations that are appropriate for your own distributed transaction workload.  More information on environment setup and the steps required to run the simulation can be found on our [wiki pages](https://github.com/roachlong/distributed-transactions-poc/wiki).
