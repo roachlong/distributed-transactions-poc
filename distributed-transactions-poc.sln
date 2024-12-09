@@ -1,0 +1,58 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedTransactions.Data", "DistributedTransactions.Data\DistributedTransactions.Data.csproj", "{1BD62D68-D13D-454D-BA64-CB94E4057391}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedTransactions.Domain", "DistributedTransactions.Domain\DistributedTransactions.Domain.csproj", "{6379E46A-413C-4E11-BF36-B4051D817D8C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedTransactions.Console", "DistributedTransactions.Console\DistributedTransactions.Console.csproj", "{C346501B-A32B-4C1B-A578-0EE92EE819B6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedTransactions.TradeCapture", "DistributedTransactions.TradeCapture\DistributedTransactions.TradeCapture.csproj", "{EDC4CA20-354D-4C82-B47E-7F0F88FEC5D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedTransactions.RebalanceRequest", "DistributedTransactions.RebalanceRequest\DistributedTransactions.RebalanceRequest.csproj", "{27542A8F-E3B7-4542-8B40-0C7DCEA2A2CA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedTransactions.SecurityRequest", "DistributedTransactions.SecurityRequest\DistributedTransactions.SecurityRequest.csproj", "{97B5763E-60EB-425A-8405-435EB6C8CCF7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedTransactions.TradeExecution", "DistributedTransactions.TradeExecution\DistributedTransactions.TradeExecution.csproj", "{9D09DC11-457A-4E7E-9546-5E11F060BED8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1BD62D68-D13D-454D-BA64-CB94E4057391}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BD62D68-D13D-454D-BA64-CB94E4057391}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BD62D68-D13D-454D-BA64-CB94E4057391}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BD62D68-D13D-454D-BA64-CB94E4057391}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6379E46A-413C-4E11-BF36-B4051D817D8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6379E46A-413C-4E11-BF36-B4051D817D8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6379E46A-413C-4E11-BF36-B4051D817D8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6379E46A-413C-4E11-BF36-B4051D817D8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C346501B-A32B-4C1B-A578-0EE92EE819B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C346501B-A32B-4C1B-A578-0EE92EE819B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C346501B-A32B-4C1B-A578-0EE92EE819B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C346501B-A32B-4C1B-A578-0EE92EE819B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDC4CA20-354D-4C82-B47E-7F0F88FEC5D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDC4CA20-354D-4C82-B47E-7F0F88FEC5D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDC4CA20-354D-4C82-B47E-7F0F88FEC5D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDC4CA20-354D-4C82-B47E-7F0F88FEC5D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{27542A8F-E3B7-4542-8B40-0C7DCEA2A2CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27542A8F-E3B7-4542-8B40-0C7DCEA2A2CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27542A8F-E3B7-4542-8B40-0C7DCEA2A2CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27542A8F-E3B7-4542-8B40-0C7DCEA2A2CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97B5763E-60EB-425A-8405-435EB6C8CCF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97B5763E-60EB-425A-8405-435EB6C8CCF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97B5763E-60EB-425A-8405-435EB6C8CCF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97B5763E-60EB-425A-8405-435EB6C8CCF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D09DC11-457A-4E7E-9546-5E11F060BED8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D09DC11-457A-4E7E-9546-5E11F060BED8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D09DC11-457A-4E7E-9546-5E11F060BED8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D09DC11-457A-4E7E-9546-5E11F060BED8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
