@@ -101,7 +101,7 @@ public class OrdersDbContext : BaseDbContext
 
         GUIDs require us to convert the value to a string
         Enums require us to convert the value to an int
-        Dates require us to use proper ISO stirng formatting
+        Dates require us to use proper ISO string formatting
         Nullable types require us to check for null values
         And make sure you put single quotes where they are required
     */
@@ -186,6 +186,86 @@ public class OrdersDbContext : BaseDbContext
         }
         throw new DataException($"failed to insert block order after {retries} retries");
     }
+
+    public int UpdateBlockOrderFills(List<TradeFill> fills, int maxRetries) {
+        var retries = 0;
+        while (retries < maxRetries) {
+            try {
+                var sql = """
+                    WITH fills AS (
+                        SELECT f.column1 AS "Code",
+                            f.column2 AS "Date",
+                            f.column3 AS "FilledQuantity",
+                            f.column4 AS "Price",
+                            f.column5 AS "CancelledQuantity",
+                            f.column6 AS "NewDestination",
+                            f.column7 AS "NewType",
+                            f.column8 AS "NewRestriction",
+                            f.column9 AS "NewQuantity"
+                        FROM (VALUES 
+                    """;
+                
+                var values = from fill in fills select string.Format(
+                    @"('{0}', '{1}', {2}, {3}, {4}, {5}, {6}, {7}, {8})",
+                    fill.Code, fill.Date.ToString("o", CultureInfo.InvariantCulture),
+                    fill.FilledQuantity == null ? "null" : fill.FilledQuantity,
+                    fill.Price == null ? "null" : fill.Price,
+                    fill.CancelledQuantity == null ? "null" : fill.CancelledQuantity,
+                    (int?) fill.NewDestination == null ? "null" : (int?) fill.NewDestination,
+                    (int?) fill.NewType == null ? "null" : (int?) fill.NewType,
+                    (int?) fill.NewRestriction == null ? "null" : (int?) fill.NewRestriction,
+                    fill.NewQuantity == null ? "null" : fill.NewQuantity);
+                
+                sql += String.Join(", ", values.ToArray()) + ") f)";
+                sql += """
+                    UPDATE "BlockOrders" o
+                    SET "Filled" = CASE WHEN f."FilledQuantity" IS NULL
+                                        THEN o."Filled"
+                                        ELSE o."Filled" + f."FilledQuantity"
+                                   END,
+                        "Price" = CASE WHEN f."FilledQuantity" IS NULL OR f."Price" IS NULL
+                                       THEN o."Price"
+                                       WHEN o."Filled" IS NULL OR o."Price" IS NULL
+                                       THEN f."Price"
+                                       ELSE ((o."Filled" / (o."Filled" + f."FilledQuantity")) * o."Price") +
+                                            ((f."FilledQuantity" / (o."Filled" + f."FilledQuantity")) * f."Price")
+                                  END,
+                        "Cancelled" = CASE WHEN f."CancelledQuantity" IS NULL
+                                           THEN o."Cancelled"
+                                           ELSE o."Cancelled" + f."CancelledQuantity"
+                                      END,
+                        "Destination" = CASE WHEN f."NewDestination" IS NULL
+                                             THEN o."Destination"
+                                             ELSE f."NewDestination"
+                                        END,
+                        "Type" = CASE WHEN f."NewType" IS NULL
+                                      THEN o."Type"
+                                      ELSE f."NewType"
+                                 END,
+                        "Restriction" = CASE WHEN f."NewRestriction" IS NULL
+                                             THEN o."Restriction"
+                                             ELSE f."NewRestriction"
+                                        END,
+                        "Quantity" = CASE WHEN f."NewQuantity" IS NULL
+                                          THEN o."Quantity"
+                                          ELSE f."NewQuantity"
+                                     END,
+                        "ModifiedBy" = 'TradeFills',
+                        "ModifiedOn" = now()
+                    FROM fills f
+                    WHERE o."Code" = f."Code"
+                      AND CAST(o."Date" AS DATE) = CAST(f."Date" AS DATE);
+                """;
+                return Database.ExecuteSqlRaw(sql);
+            }
+            catch (DataException e) {
+                Console.WriteLine($"ERROR updating fills: {e.Message}");
+                retries++;
+                Thread.Sleep(1000 * retries);
+            }
+        }
+        throw new DataException($"failed to update orders after {retries} retries");
+    }
 }
 
 public class OpeningPosition {
@@ -195,4 +275,16 @@ public class OpeningPosition {
     public double Open { get; set; }
     public double PortfolioValue { get; set; }
     public double Allocation { get; set; }
+}
+
+public class TradeFill {
+    public string Code { get; set; }
+    public DateTime Date { get; set; }
+    public long? FilledQuantity { get; set; }
+    public double? Price { get; set; }
+    public long? CancelledQuantity { get; set; }
+    public OrderDestination? NewDestination { get; set; }
+    public OrderType? NewType { get; set; }
+    public OrderRestriction? NewRestriction { get; set; }
+    public long? NewQuantity { get; set; }
 }

@@ -82,7 +82,7 @@ class TradeExecutionProgram
                             var json = JsonObject.Parse(msg.Message.Value);
 
                             // if a valid message was received then process it
-                            if (json != null && json["after"] != null) {
+                            if (json != null && json["after"] != null && json["before"] == null) {
                                 // we expect a block order message in the "post" commit part of the CDC
                                 BlockOrder? order = JsonSerializer.Deserialize<BlockOrder>(json["after"]);
 
@@ -239,7 +239,6 @@ class TradeExecutionProgram
             }
             else if (cancelRate >= random.Next(1, 100)) {
                 var cancelledQuantity = random.NextInt64(1, order.Needed);
-                order.Quantity -= cancelledQuantity;
                 order.Needed -= cancelledQuantity;
                 return new BustedTrade {
                     BlockOrderCode = order.Code,
