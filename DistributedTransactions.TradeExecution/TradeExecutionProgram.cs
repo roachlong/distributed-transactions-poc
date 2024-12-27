@@ -97,6 +97,9 @@ class TradeExecutionProgram
                                     if (orders.Count >= batchSize || window.ElapsedMilliseconds >= batchWindow) {
                                         SimulateTradeOrders(orders, amendRate, cancelRate,
                                                             random, context, maxRetries);
+                            
+                                        // commit the last message we received before flushing the internal buffer
+                                        consumer.StoreOffset(msg);
                                         
                                         // simulation completed successfully, reset state for next batch
                                         orders = [];
@@ -108,9 +111,6 @@ class TradeExecutionProgram
                                     Console.WriteLine($"ERROR: invalid order record received: {msg.Message.Value}");
                                 }
                             }
-                            
-                            // commit the message after the order has been added to our internal buffer
-                            consumer.Commit(msg);
                         }
                         
                         // if we've stopped consuming due to the process being cancelled
@@ -123,6 +123,9 @@ class TradeExecutionProgram
                             using var context = new TradesDbContext();
                             SimulateTradeOrders(orders, amendRate, cancelRate,
                                                 random, context, maxRetries);
+                            
+                            // commit the last message we received before flushing the internal buffer
+                            consumer.StoreOffset(msg);
                             
                             // simulation completed successfully, reset state for next batch
                             orders = [];
