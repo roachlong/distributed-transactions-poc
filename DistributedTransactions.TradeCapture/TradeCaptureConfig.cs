@@ -9,7 +9,8 @@ public static class TradeCaptureConfig
             BootstrapServers = "localhost:9092",
             GroupId = $"TradeCapture-{partition}",
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false
+            EnableAutoCommit = true,
+            EnableAutoOffsetStore = false
         };
     }
 }
