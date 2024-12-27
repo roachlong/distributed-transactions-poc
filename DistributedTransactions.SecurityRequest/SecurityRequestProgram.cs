@@ -82,15 +82,13 @@ class SecurityRequestProgram
                                     using var context = new OrdersDbContext();
 
                                     // get a list of customer orders based on drift calculations
-                                    var orders = GenerateCustomerOrders(
+                                    var count = GenerateCustomerOrders(
                                         security, random, context, batchSize, maxRetries
                                     );
 
                                     // if any positions require rebalancing
-                                    if (orders.Count > 0) {
-                                        // write the customer orders to the database
-                                        context.InsertCustomerOrders(orders, maxRetries);
-                                        // and aggregate them into a single block order
+                                    if (count > 0) {
+                                        // then aggregate them into a single block order
                                         context.CreateBlockOrder(security, maxRetries);
                                     }
                                 }
@@ -132,7 +130,7 @@ class SecurityRequestProgram
         Console.WriteLine($"Completed consumer for {topic}!!");
     }
 
-    private static List<CustomerOrder> GenerateCustomerOrders(
+    private static int GenerateCustomerOrders(
         RebalancingSecurity security, Random random,
         OrdersDbContext context, int batchSize, int maxRetries
     ) {
@@ -151,6 +149,7 @@ class SecurityRequestProgram
 #pragma warning restore CS8605 // Unboxing a possibly null value.
 
         var orders = new List<CustomerOrder>();
+        int count = 0;
         var positions = context.GetOpeningPositions(security, maxRetries);
         foreach (var position in positions) {
             var required = (int)(position.PortfolioValue * position.Allocation / position.Open);
@@ -176,10 +175,14 @@ class SecurityRequestProgram
 
             orders.Add(order);
             if (orders.Count >= batchSize) {
-                context.InsertCustomerOrders(orders, maxRetries);
+                count += context.InsertCustomerOrders(orders, maxRetries);
                 orders = [];
             }
         }
-        return orders;
+
+        if (orders.Count > 0) {
+            count += context.InsertCustomerOrders(orders, maxRetries);
+        }
+        return count;
     }
 }

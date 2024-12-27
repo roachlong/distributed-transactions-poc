@@ -103,6 +103,9 @@ class TradeCaptureProgram
                                         context.AddRange(trades);
                                         context.SaveChanges();
                                     }
+                            
+                                    // commit the last message we received before flushing the internal buffer
+                                    consumer.StoreOffset(msg);
 
                                     // database transaction succeeded, reset state for next batch
                                     attempts = 0;
@@ -114,9 +117,6 @@ class TradeCaptureProgram
                             else {
                                 Console.WriteLine($"ERROR: invalid trade message received: {msg.Message.Value}");
                             }
-                            
-                            // commit the message after the trade has been added to our internal buffer
-                            consumer.Commit(msg);
                         }
 
                         // if we've stopped consuming due to the process being cancelled
@@ -137,6 +137,9 @@ class TradeCaptureProgram
                                 context.AddRange(trades);
                                 context.SaveChanges();
                             }
+                            
+                            // commit the last message we received before flushing the internal buffer
+                            consumer.StoreOffset(msg);
 
                             // database transaction succeeded, reset state for next batch
                             attempts = 0;

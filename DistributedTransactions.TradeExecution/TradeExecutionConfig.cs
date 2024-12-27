@@ -9,7 +9,8 @@ public static class TradeExecutionConfig
             BootstrapServers = "localhost:9092",
             GroupId = "TradeExecution",
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false
+            EnableAutoCommit = true,
+            EnableAutoOffsetStore = false
         };
     }
 }
