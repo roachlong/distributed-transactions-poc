@@ -9,7 +9,8 @@ public static class TradeFillsConfig
             BootstrapServers = "localhost:9092",
             GroupId = $"TradeFills-{partition}",
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false
+            EnableAutoCommit = true,
+            EnableAutoOffsetStore = false
         };
     }
 }

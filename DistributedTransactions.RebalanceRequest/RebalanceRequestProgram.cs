@@ -51,9 +51,9 @@ class RebalanceRequestProgram
 
             // run until process cancelled or consectutive exceptions exceeds max retires
             while (!token.IsCancellationRequested && attempts < maxRetries) {
-                // establish a consumer object and wait 10 seconds before subscribing
+                // establish a consumer object and wait 1 second before subscribing
                 using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-                await Task.Delay(10000, token);
+                await Task.Delay(1000, token);
                 
                 // each consumer uses a shared group id and can be scaled across any number of nodes
                 consumer.Subscribe(topic);

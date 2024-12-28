@@ -20,7 +20,7 @@ class TradeFillsProgram
         const string topic = "trade-allocations";
         const int numPartitions = 10;
         const int batchSize = 128;
-        const int batchWindow = 200;
+        const int batchWindow = 1000;
         const int maxRetries = 5;
 
         // adding a listener for graceful shutdown with Ctrl+C
@@ -51,19 +51,20 @@ class TradeFillsProgram
         await Task.Run(async () => {
             // internal buffer for "batch" of trade fill messages
             var fills = new List<TradeFill>();
-            var backlog = new Dictionary<String, Queue<TradeFill>>();
+            var nextFill = new Dictionary<string, int>();
             // track number of consecutive exceptions
             int attempts = 0;
             // our kafka consumer configuration
             var config = TradeFillsConfig.GetConfig(partition);
             // start the watch for a time limit on flushing the batch
             Stopwatch window = Stopwatch.StartNew();
+            ConsumeResult<Ignore, string>? offset = null;
 
             // run until process cancelled or consecutive exceptions exceeds max retires
             while (!token.IsCancellationRequested && attempts < maxRetries) {
-                // establish a consumer object and wait 10 seconds before subscribing
+                // establish a consumer object and wait 1 second before subscribing
                 using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-                await Task.Delay(10000, token);
+                await Task.Delay(1000, token);
                 
                 // each consumer is assigned to a specific partition for ordering of trade messages
                 consumer.Assign(new TopicPartition(topic, partition));
@@ -84,6 +85,19 @@ class TradeFillsProgram
 
                                 // if the trade message is valid add it to our internal buffer
                                 if (trade != null) {
+                                    // if this is the first fill for this trade start tracking sequence number
+                                    if (!nextFill.ContainsKey(trade.BlockOrderCode)) {
+                                        nextFill.Add(trade.BlockOrderCode, trade.BlockOrderSeqNum);
+                                    }
+                                    // else if this is a later fill message then update the tracker
+                                    else if (nextFill[trade.BlockOrderCode] < trade.BlockOrderSeqNum) {
+                                        nextFill[trade.BlockOrderCode] = trade.BlockOrderSeqNum;
+                                    }
+                                    // otherwise treat the fill message as a duplicate and ignore it
+                                    else {
+                                        continue;
+                                    }
+
                                     var fill = new TradeFill {
                                         Code = trade.BlockOrderCode,
                                         Date = trade.Date,
@@ -98,14 +112,27 @@ class TradeFillsProgram
                                             (OrderRestriction) (int) trade.NewRestriction,
                                         NewQuantity = trade.NewQuantity
                                     };
+
+                                    // flush the buffer to avoid multiple updates to single record inside one transaction 
                                     if (fills.Any(f => f.Code.Equals(fill.Code))) {
-                                        if (!backlog.ContainsKey(fill.Code)) {
-                                            backlog.Add(fill.Code, new Queue<TradeFill>());
+                                        // get a new connection which should come from an external pool
+                                        using var context = new OrdersDbContext();
+                                        context.UpdateBlockOrderFills(fills, maxRetries);
+
+                                        // commit the last message we received before flushing the internal buffer
+                                        if (offset != null) {
+                                            consumer.StoreOffset(offset);
+                                            offset = null;
                                         }
-                                        backlog[fill.Code].Enqueue(fill);
-                                    } else {
-                                        fills.Add(fill);
+
+                                        // database transaction succeeded, reset state for next batch
+                                        attempts = 0;
+                                        fills = [];
+                                        window = Stopwatch.StartNew();
                                     }
+                                    
+                                    fills.Add(fill);
+                                    offset = msg;
                                 }
                                 // otherwise report an error, which should also be published to an error queue
                                 else {
@@ -118,17 +145,15 @@ class TradeFillsProgram
                                     using var context = new OrdersDbContext();
                                     context.UpdateBlockOrderFills(fills, maxRetries);
 
+                                    // commit the last message we received before flushing the internal buffer
+                                    if (offset != null) {
+                                        consumer.StoreOffset(offset);
+                                        offset = null;
+                                    }
+
                                     // database transaction succeeded, reset state for next batch
                                     attempts = 0;
                                     fills = [];
-                                    foreach (KeyValuePair<String, Queue<TradeFill>> queue in backlog) {
-                                        if (queue.Value.IsNullOrEmpty()) {
-                                            backlog.Remove(queue.Key);
-                                        }
-                                        else {
-                                            fills.Add(queue.Value.Dequeue());
-                                        }
-                                    }
                                     window = Stopwatch.StartNew();
                                 }
                             }
@@ -136,9 +161,6 @@ class TradeFillsProgram
                             else {
                                 Console.WriteLine($"ERROR: invalid trade message received: {msg.Message.Value}");
                             }
-                            
-                            // commit the message after the trade has been added to our internal buffer
-                            consumer.Commit(msg);
                         }
 
                         // if we've stopped consuming due to the process being cancelled
@@ -151,17 +173,15 @@ class TradeFillsProgram
                             using var context = new OrdersDbContext();
                             context.UpdateBlockOrderFills(fills, maxRetries);
 
+                            // commit the last message we received before flushing the internal buffer
+                            if (offset != null) {
+                                consumer.StoreOffset(offset);
+                                offset = null;
+                            }
+
                             // database transaction succeeded, reset state for next batch
                             attempts = 0;
                             fills = [];
-                            foreach (KeyValuePair<String, Queue<TradeFill>> queue in backlog) {
-                                if (queue.Value.IsNullOrEmpty()) {
-                                    backlog.Remove(queue.Key);
-                                }
-                                else {
-                                    fills.Add(queue.Value.Dequeue());
-                                }
-                            }
                             window = Stopwatch.StartNew();
                         }
                     }
