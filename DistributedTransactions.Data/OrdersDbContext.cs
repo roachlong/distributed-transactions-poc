@@ -12,6 +12,7 @@ public class OrdersDbContext : BaseDbContext
     public DbSet<RebalancingSecurity> RebalancingSecurities { get; set; }
     public DbSet<CustomerOrder> CustomerOrders { get; set; }
     public DbSet<BlockOrder> BlockOrders { get; set; }
+    public DbSet<TradeFill> TradeFills { get; set; }
     
     protected override string GetDatabaseName() {
         return "orders";
@@ -193,21 +194,27 @@ public class OrdersDbContext : BaseDbContext
             try {
                 var sql = """
                     WITH fills AS (
-                        SELECT f.column1 AS "Code",
-                            f.column2 AS "Date",
-                            f.column3 AS "FilledQuantity",
-                            f.column4 AS "Price",
-                            f.column5 AS "CancelledQuantity",
-                            f.column6 AS "NewDestination",
-                            f.column7 AS "NewType",
-                            f.column8 AS "NewRestriction",
-                            f.column9 AS "NewQuantity"
+                        INSERT INTO "TradeFills" (
+                            "BlockOrderCode", "BlockOrderSeqNum", "Date",
+                            "FilledQuantity", "Price", "CancelledQuantity",
+                            "NewDestination", "NewType", "NewRestriction", "NewQuantity")
+                        SELECT f.column1 AS "BlockOrderCode",
+                            f.column2 AS "BlockOrderSeqNum",
+                            f.column3 AS "Date",
+                            f.column4 AS "FilledQuantity",
+                            f.column5 AS "Price",
+                            f.column6 AS "CancelledQuantity",
+                            f.column7 AS "NewDestination",
+                            f.column8 AS "NewType",
+                            f.column9 AS "NewRestriction",
+                            f.column10 AS "NewQuantity"
                         FROM (VALUES 
                     """;
                 
                 var values = from fill in fills select string.Format(
-                    @"('{0}', '{1}', {2}, {3}, {4}, {5}, {6}, {7}, {8})",
-                    fill.Code, fill.Date.ToString("o", CultureInfo.InvariantCulture),
+                    @"('{0}', {1}, '{2}', {3}, {4}, {5}, {6}, {7}, {8}, {9})",
+                    fill.BlockOrderCode, fill.BlockOrderSeqNum,
+                    fill.Date.ToString("o", CultureInfo.InvariantCulture),
                     fill.FilledQuantity == null ? "null" : fill.FilledQuantity,
                     fill.Price == null ? "null" : fill.Price,
                     fill.CancelledQuantity == null ? "null" : fill.CancelledQuantity,
@@ -216,7 +223,7 @@ public class OrdersDbContext : BaseDbContext
                     (int?) fill.NewRestriction == null ? "null" : (int?) fill.NewRestriction,
                     fill.NewQuantity == null ? "null" : fill.NewQuantity);
                 
-                sql += String.Join(", ", values.ToArray()) + ") f)";
+                sql += String.Join(", ", values.ToArray()) + ") f ON CONFLICT DO NOTHING RETURNING *)";
                 sql += """
                     UPDATE "BlockOrders" o
                     SET "Filled" = CASE WHEN f."FilledQuantity" IS NULL
@@ -253,7 +260,7 @@ public class OrdersDbContext : BaseDbContext
                         "ModifiedBy" = 'TradeFills',
                         "ModifiedOn" = now()
                     FROM fills f
-                    WHERE o."Code" = f."Code"
+                    WHERE o."Code" = f."BlockOrderCode"
                       AND CAST(o."Date" AS DATE) = CAST(f."Date" AS DATE);
                 """;
                 return Database.ExecuteSqlRaw(sql);
@@ -275,16 +282,4 @@ public class OpeningPosition {
     public double Open { get; set; }
     public double PortfolioValue { get; set; }
     public double Allocation { get; set; }
-}
-
-public class TradeFill {
-    public string Code { get; set; }
-    public DateTime Date { get; set; }
-    public long? FilledQuantity { get; set; }
-    public double? Price { get; set; }
-    public long? CancelledQuantity { get; set; }
-    public OrderDestination? NewDestination { get; set; }
-    public OrderType? NewType { get; set; }
-    public OrderRestriction? NewRestriction { get; set; }
-    public long? NewQuantity { get; set; }
 }

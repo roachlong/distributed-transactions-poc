@@ -5,7 +5,6 @@ using Confluent.Kafka;
 using DistributedTransactions.Data;
 using DistributedTransactions.Domain.Allocations;
 using DistributedTransactions.Domain.Orders;
-using Microsoft.IdentityModel.Tokens;
 
 namespace DistributedTransactions.TradeFills;
 
@@ -51,7 +50,6 @@ class TradeFillsProgram
         await Task.Run(async () => {
             // internal buffer for "batch" of trade fill messages
             var fills = new List<TradeFill>();
-            var nextFill = new Dictionary<string, int>();
             // track number of consecutive exceptions
             int attempts = 0;
             // our kafka consumer configuration
@@ -85,21 +83,9 @@ class TradeFillsProgram
 
                                 // if the trade message is valid add it to our internal buffer
                                 if (trade != null) {
-                                    // if this is the first fill for this trade start tracking sequence number
-                                    if (!nextFill.ContainsKey(trade.BlockOrderCode)) {
-                                        nextFill.Add(trade.BlockOrderCode, trade.BlockOrderSeqNum);
-                                    }
-                                    // else if this is a later fill message then update the tracker
-                                    else if (nextFill[trade.BlockOrderCode] < trade.BlockOrderSeqNum) {
-                                        nextFill[trade.BlockOrderCode] = trade.BlockOrderSeqNum;
-                                    }
-                                    // otherwise treat the fill message as a duplicate and ignore it
-                                    else {
-                                        continue;
-                                    }
-
                                     var fill = new TradeFill {
-                                        Code = trade.BlockOrderCode,
+                                        BlockOrderCode = trade.BlockOrderCode,
+                                        BlockOrderSeqNum = trade.BlockOrderSeqNum,
                                         Date = trade.Date,
                                         FilledQuantity = trade.Quantity,
                                         Price = trade.Price,
@@ -114,7 +100,7 @@ class TradeFillsProgram
                                     };
 
                                     // flush the buffer to avoid multiple updates to single record inside one transaction 
-                                    if (fills.Any(f => f.Code.Equals(fill.Code))) {
+                                    if (fills.Any(f => f.BlockOrderCode.Equals(fill.BlockOrderCode))) {
                                         // get a new connection which should come from an external pool
                                         using var context = new OrdersDbContext();
                                         context.UpdateBlockOrderFills(fills, maxRetries);
