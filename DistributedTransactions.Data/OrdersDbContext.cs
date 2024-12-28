@@ -212,7 +212,7 @@ public class OrdersDbContext : BaseDbContext
                     """;
                 
                 var values = from fill in fills select string.Format(
-                    @"('{0}', {1}, '{2}', {3}, {4}, {5}, {6}, {7}, {8}, {9})",
+                    @"('{0}', {1}, CAST('{2}' AS DATE), {3}, {4}, {5}, {6}, {7}, {8}, {9})",
                     fill.BlockOrderCode, fill.BlockOrderSeqNum,
                     fill.Date.ToString("o", CultureInfo.InvariantCulture),
                     fill.FilledQuantity == null ? "null" : fill.FilledQuantity,
