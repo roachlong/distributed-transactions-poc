@@ -63,6 +63,21 @@
             "env": {
                 "DATABASE_URL": "postgresql://me:secret@localhost:26257/allocations?sslmode=require"
             }
+        },
+        {
+            "name": "TradeFills Launch (console)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/DistributedTransactions.TradeFills/bin/Debug/net8.0/DistributedTransactions.TradeFills.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/DistributedTransactions.TradeFills",
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "internalConsoleOptions": "openOnSessionStart",
+            "env": {
+                "DATABASE_URL": "postgresql://me:secret@localhost:26257/orders?sslmode=require"
+            }
         }
     ]
 }

@@ -4,10 +4,11 @@ using System.Text.Json.Nodes;
 using Confluent.Kafka;
 using DistributedTransactions.Data;
 using DistributedTransactions.Domain.Allocations;
+using DistributedTransactions.Domain.Orders;
 
-namespace DistributedTransactions.TradeCapture;
+namespace DistributedTransactions.TradeFills;
 
-class TradeCaptureProgram
+class TradeFillsProgram
 {
     static void Main(string[] args) {
         MainAsync().Wait();
@@ -15,12 +16,11 @@ class TradeCaptureProgram
 
     private static async Task MainAsync() {
         // hard-coded configuration which should be part of the app environment configuration
-        const string topic = "trade-executions";
+        const string topic = "trade-allocations";
         const int numPartitions = 10;
         const int batchSize = 128;
         const int batchWindow = 1000;
         const int maxRetries = 5;
-        const bool useMultiValueInsert = true;
 
         // adding a listener for graceful shutdown with Ctrl+C
         CancellationTokenSource cts = new();
@@ -32,8 +32,8 @@ class TradeCaptureProgram
         // creating tasks to run indefinitely as separate process threads
         var tasks = new List<Task>();
         for (int i = 0; i < numPartitions; i++) {
-            tasks.Add(CaptureTrades(
-                topic, i, batchSize, batchWindow, maxRetries, useMultiValueInsert, cts.Token
+            tasks.Add(CaptureTradeFills(
+                topic, i, batchSize, batchWindow, maxRetries, cts.Token
             ));
         }
 
@@ -42,22 +42,23 @@ class TradeCaptureProgram
         cts.Dispose();
     }
 
-    private static async Task CaptureTrades(
+    private static async Task CaptureTradeFills(
         string topic, int partition, int batchSize, int batchWindow,
-        int maxRetries, bool useMultiValueInsert, CancellationToken token
+        int maxRetries, CancellationToken token
     ) {
         Console.WriteLine($"Launching consumer {partition} for {topic}...");
         await Task.Run(async () => {
-            // internal buffer for "batch" of trade messages
-            var trades = new List<Trade>();
+            // internal buffer for "batch" of trade fill messages
+            var fills = new List<TradeFill>();
             // track number of consecutive exceptions
             int attempts = 0;
             // our kafka consumer configuration
-            var config = TradeCaptureConfig.GetConfig(partition);
+            var config = TradeFillsConfig.GetConfig(partition);
             // start the watch for a time limit on flushing the batch
             Stopwatch window = Stopwatch.StartNew();
+            ConsumeResult<Ignore, string>? offset = null;
 
-            // run until process cancelled or consectutive exceptions exceeds max retires
+            // run until process cancelled or consecutive exceptions exceeds max retires
             while (!token.IsCancellationRequested && attempts < maxRetries) {
                 // establish a consumer object and wait 1 second before subscribing
                 using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
@@ -82,7 +83,42 @@ class TradeCaptureProgram
 
                                 // if the trade message is valid add it to our internal buffer
                                 if (trade != null) {
-                                    trades.Add(trade);
+                                    var fill = new TradeFill {
+                                        BlockOrderCode = trade.BlockOrderCode,
+                                        BlockOrderSeqNum = trade.BlockOrderSeqNum,
+                                        Date = trade.Date,
+                                        FilledQuantity = trade.Quantity,
+                                        Price = trade.Price,
+                                        CancelledQuantity = trade.CancelledQuantity,
+                                        NewDestination = trade.NewDestination == null ? null :
+                                            (OrderDestination) (int) trade.NewDestination,
+                                        NewType = trade.NewType == null ? null :
+                                            (OrderType) (int) trade.NewType,
+                                        NewRestriction = trade.NewRestriction == null ? null :
+                                            (OrderRestriction) (int) trade.NewRestriction,
+                                        NewQuantity = trade.NewQuantity
+                                    };
+
+                                    // flush the buffer to avoid multiple updates to single record inside one transaction 
+                                    if (fills.Any(f => f.BlockOrderCode.Equals(fill.BlockOrderCode))) {
+                                        // get a new connection which should come from an external pool
+                                        using var context = new OrdersDbContext();
+                                        context.UpdateBlockOrderFills(fills, maxRetries);
+
+                                        // commit the last message we received before flushing the internal buffer
+                                        if (offset != null) {
+                                            consumer.StoreOffset(offset);
+                                            offset = null;
+                                        }
+
+                                        // database transaction succeeded, reset state for next batch
+                                        attempts = 0;
+                                        fills = [];
+                                        window = Stopwatch.StartNew();
+                                    }
+                                    
+                                    fills.Add(fill);
+                                    offset = msg;
                                 }
                                 // otherwise report an error, which should also be published to an error queue
                                 else {
@@ -90,26 +126,20 @@ class TradeCaptureProgram
                                 }
 
                                 // flush the trades to the database if batch size or time limit exceeded
-                                if (trades.Count >= batchSize || window.ElapsedMilliseconds >= batchWindow) {
+                                if (fills.Count >= batchSize || window.ElapsedMilliseconds >= batchWindow) {
                                     // get a new connection which should come from an external pool
-                                    using var context = new AllocationsDbContext();
-                                    if (useMultiValueInsert) {
-                                        // we should always use multi-value inserts for performance
-                                        context.InsertTradesRawSql(trades, maxRetries);
-                                    }
-                                    else {
-                                        // but also linq won't work because there's no way to handle
-                                        // conflicts when a duplicate message is received
-                                        context.AddRange(trades);
-                                        context.SaveChanges();
-                                    }
-                            
+                                    using var context = new OrdersDbContext();
+                                    context.UpdateBlockOrderFills(fills, maxRetries);
+
                                     // commit the last message we received before flushing the internal buffer
-                                    consumer.StoreOffset(msg);
+                                    if (offset != null) {
+                                        consumer.StoreOffset(offset);
+                                        offset = null;
+                                    }
 
                                     // database transaction succeeded, reset state for next batch
                                     attempts = 0;
-                                    trades = [];
+                                    fills = [];
                                     window = Stopwatch.StartNew();
                                 }
                             }
@@ -122,28 +152,22 @@ class TradeCaptureProgram
                         // if we've stopped consuming due to the process being cancelled
                         // and/or we've also waited past our batch window time limit
                         // make sure we flush our internal buffer of acknowledged trade messages
-                        if (trades.Count > 0 && (
+                        if (fills.Count > 0 && (
                             token.IsCancellationRequested || window.ElapsedMilliseconds >= batchWindow
                         )) {
                             // get a new connection which should come from an external pool
-                            using var context = new AllocationsDbContext();
-                            if (useMultiValueInsert) {
-                                // we should always use multi-value inserts for performance
-                                context.InsertTradesRawSql(trades, maxRetries);
-                            }
-                            else {
-                                // but also linq won't work because there's no way to handle
-                                // conflicts when a duplicate message is received
-                                context.AddRange(trades);
-                                context.SaveChanges();
-                            }
-                            
+                            using var context = new OrdersDbContext();
+                            context.UpdateBlockOrderFills(fills, maxRetries);
+
                             // commit the last message we received before flushing the internal buffer
-                            consumer.StoreOffset(msg);
+                            if (offset != null) {
+                                consumer.StoreOffset(offset);
+                                offset = null;
+                            }
 
                             // database transaction succeeded, reset state for next batch
                             attempts = 0;
-                            trades = [];
+                            fills = [];
                             window = Stopwatch.StartNew();
                         }
                     }

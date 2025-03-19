@@ -65,9 +65,9 @@ class TradeExecutionProgram
 
             // run until process cancelled or consectutive exceptions exceeds max retires
             while (!token.IsCancellationRequested && attempts < maxRetries) {
-                // establish a consumer object and wait 10 seconds before subscribing
+                // establish a consumer object and wait 1 second before subscribing
                 using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-                await Task.Delay(10000, token);
+                await Task.Delay(1000, token);
                 
                 // each consumer uses a shared group id and can be scaled across any number of nodes
                 consumer.Subscribe(topic);
@@ -82,7 +82,7 @@ class TradeExecutionProgram
                             var json = JsonObject.Parse(msg.Message.Value);
 
                             // if a valid message was received then process it
-                            if (json != null && json["after"] != null) {
+                            if (json != null && json["after"] != null && json["before"] == null) {
                                 // we expect a block order message in the "post" commit part of the CDC
                                 BlockOrder? order = JsonSerializer.Deserialize<BlockOrder>(json["after"]);
 
@@ -242,7 +242,6 @@ class TradeExecutionProgram
             }
             else if (cancelRate >= random.Next(1, 100)) {
                 var cancelledQuantity = random.NextInt64(1, order.Needed);
-                order.Quantity -= cancelledQuantity;
                 order.Needed -= cancelledQuantity;
                 return new BustedTrade {
                     BlockOrderCode = order.Code,
