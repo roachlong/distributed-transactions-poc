@@ -245,21 +245,31 @@ namespace DistributedTransactions.TradeViewer
         }
     }
 
+	public enum TradeActivityType { Bust = 0, Execute = 1, Replace = 2 }
     public enum TradeDirection { Hold = 0, Buy = 1, Sell = 2 }
     public enum TradeType { Limit = 0, Market, Stop, StopLimit, TrailingStop }
     public enum TradeDestination { BSE = 0, Cboe, CBOT, CME, CHX, ISE, MS4X, Nasdaq, NSX, NYSE, PHLX }
 
     public class Trade
-    {
-        public string Symbol { get; set; } = "";
-        public long? Quantity { get; set; }
-        public double? Price { get; set; }
-        public DateTime Date { get; set; }
-        public int Direction { get; set; }
-        public int Destination { get; set; }
-        public int Type { get; set; }
-        public string BlockOrderCode { get; set; } = "";
-    }
+	{
+		public string Symbol { get; set; } = "";
+		public long? Quantity { get; set; }
+		public double? Price { get; set; }
+		public DateTime Date { get; set; }
+
+		public TradeActivityType ActivityType { get; set; }
+		public int Direction { get; set; }
+		public int Destination { get; set; }
+		public int Type { get; set; }
+
+		public string BlockOrderCode { get; set; } = "";
+
+		public string ActivityTypeName => ActivityType.ToString();
+		public string DirectionName => ((TradeDirection)Direction).ToString();
+		public string DestinationName => ((TradeDestination)Destination).ToString();
+		public string TypeName => ((TradeType)Type).ToString();
+	}
+
 
     public class TradeSearchPage
     {
