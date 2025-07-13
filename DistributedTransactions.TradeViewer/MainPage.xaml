@@ -1,0 +1,64 @@
+﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DistributedTransactions.TradeViewer.MainPage"
+             Title="Trade Viewer">
+<ScrollView>
+    <VerticalStackLayout Padding="10" Spacing="10">
+
+        <!-- Search Filters -->
+        <HorizontalStackLayout Spacing="10">
+            <DatePicker x:Name="DatePicker" WidthRequest="160"/>
+            <Entry x:Name="SymbolEntry" Placeholder="Symbol" WidthRequest="100"/>
+            <Button x:Name="DirectionPickerBtn" Text="Direction" Clicked="OnDirectionPickerClicked" />
+            <Button x:Name="TypePickerBtn" Text="Type" Clicked="OnTypePickerClicked" />
+            <Button x:Name="DestinationPickerBtn" Text="Destination" Clicked="OnDestinationPickerClicked" />
+            <Entry x:Name="PageSizeEntry" Text="100" WidthRequest="60"/>
+            <Entry x:Name="PreloadEntry" Text="1" WidthRequest="40"/>
+            <Button Text="Search" Clicked="OnSearchClicked"/>
+        </HorizontalStackLayout>
+
+        <!-- Local Page Navigation -->
+        <HorizontalStackLayout Spacing="10" Padding="0,10">
+            <Button Text="-" Clicked="OnLocalPagePrev" />
+            <Slider x:Name="LocalPageSlider"
+                    Minimum="0"
+                    Maximum="0"
+                    ValueChanged="OnLocalPageSliderChanged"
+                    WidthRequest="200" />
+            <Button Text="+" Clicked="OnLocalPageNext" />
+            <Label x:Name="LocalPageLabel" Text="Sub-page: 1" VerticalTextAlignment="Center"/>
+        </HorizontalStackLayout>
+
+
+        <!-- Trade Results (Rendered as a flat table row) -->
+        <CollectionView x:Name="TradeCollection" ItemsLayout="VerticalList">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Stroke="Gray" StrokeThickness="0,0,0,1" Padding="4,2">
+                        <HorizontalStackLayout Spacing="10">
+                            <Label Text="{Binding Symbol}" WidthRequest="70" />
+                            <Label Text="{Binding Quantity}" WidthRequest="80" />
+                            <Label Text="{Binding Price}" WidthRequest="80" />
+                            <Label Text="{Binding Date}" WidthRequest="140" />
+                            <Label Text="{Binding Direction}" WidthRequest="60" />
+                            <Label Text="{Binding Destination}" WidthRequest="90" />
+                            <Label Text="{Binding Type}" WidthRequest="80" />
+                            <Label Text="{Binding BlockOrderCode}" WidthRequest="110" />
+                        </HorizontalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Page Buttons for API-based navigation -->
+        <FlexLayout x:Name="PageButtonsPanel"
+                    Wrap="Wrap"
+                    Direction="Row"
+                    JustifyContent="Start"
+                    AlignItems="Start"
+                    Margin="0,10,0,0"
+                    />
+    </VerticalStackLayout>
+</ScrollView>
+
+</ContentPage>

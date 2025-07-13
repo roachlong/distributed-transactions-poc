@@ -18,6 +18,15 @@ builder.Services.AddLogging(logging => {
     logging.AddFilter("Npgsql", LogLevel.Debug); // Capture Npgsql logs only
 });
 
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(7200);
+});
+
+#if DEBUG
+    Avalonia.Diagnostics.DevToolsExtensions.AttachDevTools(app);
+#endif
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
