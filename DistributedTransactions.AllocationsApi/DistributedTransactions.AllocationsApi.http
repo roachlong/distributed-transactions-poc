@@ -1,0 +1,6 @@
+@DistributedTransactions.AllocationsApi_HostAddress = http://localhost:5109
+
+GET {{DistributedTransactions.AllocationsApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

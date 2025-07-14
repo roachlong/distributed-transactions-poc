@@ -78,6 +78,19 @@
             "env": {
                 "DATABASE_URL": "postgresql://me:secret@localhost:26257/orders?sslmode=require"
             }
+        },
+        {
+            "name": "Allocations API (console)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/DistributedTransactions.AllocationsApi/bin/Debug/net8.0/DistributedTransactions.AllocationsApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/DistributedTransactions.AllocationsApi",
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "internalConsoleOptions": "openOnSessionStart",
+            "envFile": "${workspaceFolder}/DistributedTransactions.AllocationsApi/.env"
         }
     ]
 }
