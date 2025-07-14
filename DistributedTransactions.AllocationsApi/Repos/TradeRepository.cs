@@ -155,7 +155,7 @@ public class TradeRepository
         cmd.Parameters.AddWithValue("date", cursor.Date);
         cmd.Parameters.AddWithValue("pageSize", cursor.PageSize);
         cmd.Parameters.AddWithValue("afterSymbol", cursor.Symbol);
-        cmd.Parameters.AddWithValue("afterQuantity", cursor.Quantity != null ? (object)cursor.Quantity : DBNull.Value);
+        cmd.Parameters.AddWithValue("afterQuantity", cursor.Quantity);
         cmd.Parameters.AddWithValue("afterId", cursor.Id);
         cmd.Parameters.Add("symbol", NpgsqlDbType.Text).Value = (object?)cursor.SearchSymbol ?? DBNull.Value;
         cmd.Parameters.Add("direction", NpgsqlDbType.Integer).Value = cursor.Direction.ToDbNullableEnum();
